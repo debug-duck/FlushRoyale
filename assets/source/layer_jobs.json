@@ -1,0 +1,34 @@
+{
+ "_doc": "Every Layer generation used by the game (provenance + cost). Model gpt-image-2.5-flare, quality medium, batch_size 1, priced with estimate_forge_price before running. Workspace 2f56243b-eef9-40c6-a060-8e7c186b0d35, Layer session a51c029f-36c1-4c75-bb35-bc8739852024.",
+ "total_cost_creative_units": 4.709,
+ "jobs": [
+  {
+   "job_id": "bowl_background",
+   "inference_id": "82b46bce-55d6-4196-bec5-6dd6b0c96405",
+   "output_file_id": "0936f2e6-8352-4bd1-97e9-03969fe6d07f",
+   "guidance": [
+    {
+     "file_id": "fc64cd28-7f92-4843-a4e4-5534a0db3c95",
+     "type": "init_image",
+     "weight": 0.85,
+     "local": "assets/source/guide/bowl_guide.png (tools/asset_pipeline/make_bowl_guide.py, built from data/bowl.json)"
+    }
+   ],
+   "size": "864x1536",
+   "cost_creative_units": 2.159,
+   "local_source": "assets/source/bowl_background_raw.png",
+   "runtime": "assets/processed/background.jpg",
+   "prompt": "Image 1 is a flat layout guide. Repaint it as a finished portrait mobile game background in a colorful, clean, slightly ridiculous cartoon style with thick dark outlines and simple cel shading. Keep the toilet's exact silhouette, position, size and proportions from Image 1 ... cut-away side view, EMPTY bowl interior, no water ... mint-green tiled bathroom wall, wooden floor strip, calm upper third, small decorations only near the edges. No water, no objects, no text, no logos, no people, no toilet seat or lid. (full text in the Layer session)"
+  },
+  {
+   "job_id": "objects_sheet",
+   "inference_id": "c1e43e9e-0a75-4ca0-90fb-5755601d3339",
+   "output_file_id": "d810927d-827c-4b27-814c-5f1655928861",
+   "size": "1536x1024",
+   "cost_creative_units": 2.55,
+   "local_source": "assets/source/objects_sheet_raw.png",
+   "runtime": "assets/processed/objects/tier_1..6.png",
+   "prompt": "Game sprite sheet of six separate cartoon bathroom items for a physics merging game ... 3 by 2 grid ... 1) yellow rubber duck facing right 2) upright toilet paper roll 3) tall teal-blue shampoo bottle 4) upright plunger, red cup, wooden handle 5) worn brown leather boot, toe right 6) small shiny gold toilet, tank left ... flat solid pure magenta (#FF00FF) background, no shadows, no text, no pink or magenta on the items. (full text in the Layer session)"
+  }
+ ]
+}

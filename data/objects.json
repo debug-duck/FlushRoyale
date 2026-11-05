@@ -1,0 +1,28 @@
+{
+  "_doc": "Object tiers 1..6. Collision shapes are hand-authored here (local px, y down, origin = sprite centre) and are independent of the artwork; the sprite is only fitted on top (sprite.size). density is relative to water (1.0): < 1 floats. resistance = seconds at full drain pressure needed to squeeze a plug through the outlet. scale multiplies shapes, sprite and com. Only tiers listed in config spawn_weights spawn naturally.",
+  "tiers": [
+    {"tier": 1, "name": "Rubber Duck", "density": 0.45, "resistance": 0.6, "color": "ffd23f",
+     "shapes": [{"type": "poly", "points": [[-50, -4], [-30, -12], [28, -8], [44, 14], [36, 40], [0, 47], [-36, 42], [-50, 20]]},
+                {"type": "circle", "r": 25, "pos": [12, -20]}],
+     "sprite": {"file": "tier_1.png", "size": [100, 94]}},
+    {"tier": 2, "name": "Toilet Paper", "density": 0.7, "resistance": 0.6, "color": "f4f1ea",
+     "shapes": [{"type": "rect", "size": [92, 112], "bevel": 12}],
+     "sprite": {"file": "tier_2.png", "size": [95, 116]}},
+    {"tier": 3, "name": "Shampoo", "density": 1.15, "resistance": 0.7, "color": "2bb3c0",
+     "shapes": [{"type": "capsule", "r": 42, "h": 206}],
+     "sprite": {"file": "tier_3.png", "size": [91, 210]}},
+    {"tier": 4, "name": "Plunger", "density": 0.85, "resistance": 1.4, "color": "d83a34", "scale": 1.1, "com": [0, 100],
+     "shapes": [{"type": "poly", "points": [[-38, 75], [38, 75], [82, 140], [82, 160], [-82, 160], [-82, 140]]},
+                {"type": "rect", "size": [24, 245], "pos": [0, -42]}],
+     "sprite": {"file": "tier_4.png", "size": [164, 330]}},
+    {"tier": 5, "name": "Old Boot", "density": 1.3, "resistance": 2.6, "color": "8a5a36",
+     "shapes": [{"type": "rect", "size": [142, 138], "pos": [-41, -49]},
+                {"type": "poly", "points": [[-122, 15], [50, 15], [128, 50], [133, 92], [-122, 100]]}],
+     "sprite": {"file": "tier_5.png", "size": [267, 236]}},
+    {"tier": 6, "name": "Golden Toilet", "density": 1.8, "resistance": 4.2, "color": "f2b632", "scale": 1.15,
+     "shapes": [{"type": "rect", "size": [115, 140], "pos": [-84, -80]},
+                {"type": "poly", "points": [[-60, -70], [142, -70], [132, -20], [90, 40], [-60, 40]]},
+                {"type": "poly", "points": [[-40, 40], [85, 40], [110, 150], [-55, 150]]}],
+     "sprite": {"file": "tier_6.png", "size": [284, 300]}}
+  ]
+}

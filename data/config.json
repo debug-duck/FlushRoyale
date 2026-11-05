@@ -1,0 +1,72 @@
+{
+  "_doc": "Every gameplay/physics tuning value of the PoC. Units: design pixels (1080x1920), seconds, px/s, px/s^2. Water volumes are 2D areas in px^2.",
+  "throw": {
+    "grab_radius": 320,
+    "dead_zone": 28,
+    "max_drag": 430,
+    "min_speed": 320,
+    "max_speed": 2350,
+    "visual_pull": 150,
+    "cooldown": 0.45,
+    "preview_time": 1.6,
+    "preview_dot_every": 3
+  },
+  "spawn_weights": [45, 35, 20],
+  "merge": {
+    "momentum_kept": 0.85,
+    "grow_from": 0.72,
+    "grow_time": 0.16
+  },
+  "water": {
+    "density": 1.0,
+    "linear_drag": 2.4,
+    "angular_drag": 3.0,
+    "refill_rate": 42000,
+    "passive_drain": 9000,
+    "level_smoothing": 10.0,
+    "splash_speed": 260,
+    "ripple_columns": 54,
+    "ripple_stiffness": 70.0,
+    "ripple_damping": 3.2,
+    "ripple_spread": 0.22
+  },
+  "flush": {
+    "duration": 3.0,
+    "cooldown": 3.0,
+    "inflow_total": 110000,
+    "inflow_time": 1.8,
+    "outflow_rate": 95000,
+    "siphon_tail": 1.4,
+    "_vortex_doc": "Side view of a whirlpool around the vertical drain axis: suction pulls DOWN (strongest on the axis), objects are drawn TOWARD the axis, the swirl shows as a sideways slosh + spin. All scaled by 1/(1 + distance_to_drain/falloff).",
+    "radial": 3000,
+    "axis_width": 260,
+    "center_pull": 3.2,
+    "tangential": 1100,
+    "swirl_speed": 5.0,
+    "falloff": 420,
+    "spin_torque": 7.0,
+    "outlet_pull": 3800,
+    "ramp_in": 0.3,
+    "ramp_out": 0.7
+  },
+  "drain": {
+    "check_from_y": 1290,
+    "check_step": 22,
+    "samples": 21,
+    "plug_cover": 0.82,
+    "plug_line_cover": 0.45,
+    "plug_seal": 0.88,
+    "plug_max_speed": 140,
+    "squeeze_decay": 0.06,
+    "max_pressure_bonus": 1.2,
+    "pass_speed": 950
+  },
+  "overflow": {
+    "grace_time": 3.0
+  },
+  "score": {
+    "merge_base": 2,
+    "flush_base": 10,
+    "flush_mult": 3
+  }
+}

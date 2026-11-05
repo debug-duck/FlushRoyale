@@ -1,0 +1,13 @@
+.godot/
+*.import
+build/
+*.apk
+*.aab
+*.keystore
+*.jks
+.env
+/android/
+export_credentials.cfg
+__pycache__/
+*.pyc
+tools/dev/out/

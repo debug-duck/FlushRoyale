@@ -1,0 +1,21 @@
+{
+  "_doc": "Toilet geometry in design pixels (1080x1920). Physics, water volume, the procedural water and the Layer art guide are all built from this one file. Right side = mirror of the left (x -> 1080 - x).",
+  "center_x": 540,
+  "rim_y": 742,
+  "inner_left": [[112, 742], [98, 840], [102, 960], [130, 1080], [180, 1200], [252, 1310], [332, 1400], [405, 1468], [458, 1528]],
+  "drain_width": 130,
+  "throat_y": 1592,
+  "outlet_bottom": 2150,
+  "flush_out_y": 1905,
+  "trap_gate_y": 1710,
+  "drain_layer_from_y": 1250,
+  "rim_slope_top_y": 690,
+  "wall_thickness": 70,
+  "floor_y": 1880,
+  "overflow_y": 812,
+  "rest_level_y": 1235,
+  "pedestal": [[392, 1500], [372, 1700], [330, 1880], [750, 1880], [708, 1700], [688, 1500]],
+  "launch": [540, 420],
+  "flush_button": [915, 1720],
+  "overflow_gauge": [165, 1720]
+}

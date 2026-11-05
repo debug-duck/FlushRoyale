@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Headless tests + bot probe
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot (tools/ci/godot_version.env)
+        run: tools/ci/setup_godot.sh
+      - name: Import project
+        run: godot --headless --path . --import || godot --headless --path . --import
+      - name: Acceptance tests
+        run: godot --headless --path . --fixed-fps 60 tests/run_tests.tscn
+      - name: Bot probe (balance / stability report)
+        run: godot --headless --path . --fixed-fps 60 tests/bot_probe.tscn -- --games=2 --cap=240
+
+  android-debug-apk:
+    name: Android debug APK
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates
+          key: godot-templates-${{ hashFiles('tools/ci/godot_version.env') }}
+      - run: tools/ci/setup_godot.sh --templates
+      - run: tools/ci/android_setup.sh
+      - run: tools/ci/build_apk.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flush-royale-debug-apk
+          path: build/flush-royale-debug.apk
+          if-no-files-found: error
+          retention-days: 3

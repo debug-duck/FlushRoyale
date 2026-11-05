@@ -17,7 +17,14 @@ before the toilet clogs and overflows.
 
 Flush small stuff now for safe points, or keep merging for a much bigger flush and risk the flood?
 
-## Run it
+## Run it on Windows
+* **`run_pc.bat`**: pulls the latest version from GitHub, downloads Godot 4.4.1 once (into `build\godot`), re-imports the
+  assets and starts the game.
+* **`build_android.bat`**: pulls, re-imports, builds `build\flush-royale-debug.apk` and installs + launches it on a phone
+  connected over USB (`--no-push` = build only). Needs the Android SDK and JDK 17+ (same as RockRocketLaser).
+* Either file also works on its own: run it from anywhere and it clones the project into `C:\temp\FlushRoyale` first (needs Git).
+
+## Run it on Linux
 ```bash
 tools/ci/setup_godot.sh             # pinned Godot 4.4.1 (Linux) -> /opt/godot
 godot --path . --import

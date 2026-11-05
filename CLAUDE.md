@@ -33,6 +33,7 @@ data/objects.json       6 tiers: name, density, resistance, hand-authored collis
 data/bowl.json          toilet geometry (single source for physics, water, art guide)
 assets/source/          raw Layer output + guide + layer_jobs.json (provenance)   assets/processed/ runtime art
 tools/asset_pipeline/   make_bowl_guide.py (guide + --overlay alignment check), build_assets.py (key/split/scale), chroma.py
+run_pc.bat · build_android.bat  Windows: update + reimport + run / build APK + install on phone
 tests/                  run_tests (acceptance), drain_probe (per-tier flush trace), bot_probe (balance/perf)   tools/dev/shots (screenshots)
 ```
 
@@ -73,6 +74,9 @@ godot --headless --path . --fixed-fps 60 tests/bot_probe.tscn -- --games=3 --cap
 xvfb-run -a -s "-screen 0 1280x1024x24" godot --path . --rendering-driver opengl3 --resolution 540x960 tools/dev/shots.tscn   # screenshots -> tools/dev/out
 godot --path .                                   # play (mouse = touch). Keys: F/Space flush, R restart, F1 collision debug, 1-6 drop tier at mouse (debug builds)
 ```
+Windows (owner's PC, same as RockRocketLaser): `run_pc.bat` (git pull --ff-only, Godot 4.4.1 auto-download, forced re-import, run) and
+`build_android.bat [--no-push]` (pull, import, export APK, adb install + launch). Run alone, either one clones the repo into
+`C:\temp\FlushRoyale` (branch hard-coded in the file: update `BRANCH` if the work moves to another branch). Keep .bat files CRLF (`.gitattributes`).
 Re-run the bot probe after ANY tuning change. Android: `tools/ci/setup_godot.sh --templates && tools/ci/android_setup.sh && tools/ci/build_apk.sh`.
 
 ## 6. Assets (Layer)

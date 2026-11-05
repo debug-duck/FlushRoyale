@@ -8,7 +8,7 @@ cd /d "%~dp0"
 REM ---- first use: this .bat on its own (no project next to it) -> clone the repo into C:\temp\FlushRoyale, run from there ----
 if exist "%~dp0project.godot" goto :have_project
 set "REPO=https://github.com/debug-duck/FlushRoyale.git"
-set "BRANCH=claude/flush-royale-godot-poc-nnxf41"
+set "BRANCH=main"
 set "TARGET=C:\temp\FlushRoyale"
 where git >nul 2>&1 || (echo Git is needed: https://git-scm.com/download/win & goto :fail)
 if not exist "%TARGET%\project.godot" (

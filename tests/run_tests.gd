@@ -23,7 +23,12 @@ func _ready() -> void:
 	await test_blockage_restricts_drainage()
 	await test_every_tier_flushable()
 	await test_overflow_game_over()
+	await test_flush_charges()
+	await test_triple_merge()
+	await test_chain()
+	await test_royal_flush_and_levels()
 	test_project_and_export()
+	Game.carry = {}
 	print("\n==== %d checks, %d failures ====" % [checks, failures.size()])
 	for f in failures:
 		print("FAIL: ", f)
@@ -40,15 +45,21 @@ func near(a: float, b: float, tol: float, msg: String) -> void:
 
 # ------------------------------------------------------------------ helpers
 
-func new_game(keep_launcher := false) -> Game:
+## A fresh game on `level`. Physics tests get unlimited flush charges unless real_charges.
+func new_game(keep_launcher := false, level := 0, real_charges := false) -> Game:
 	if game and is_instance_valid(game):
 		game.queue_free()
 		await get_tree().process_frame
+	Engine.time_scale = 1.0
+	Game.carry = {"level": level, "score": 0}
 	game = load("res://game/main.tscn").instantiate()
 	game.persist = false
+	game.reload_enabled = false
 	game.rng.seed = 1234
 	add_child(game)
 	await get_tree().physics_frame
+	if not real_charges:
+		game.charges = 99
 	if not keep_launcher:
 		game.launcher.enabled = false
 		if game.launcher.held:
@@ -98,15 +109,28 @@ func test_data_and_geometry() -> void:
 		ok(Cfg.c.has(k), "config section " + k)
 
 func test_tiers_and_spawning() -> void:
-	ok(Cfg.max_tier() == 6, "six tiers")
-	var prev_area := 0.0
-	for t in range(1, 7):
-		var o := FlushObject.create(t, null)
-		ok(o.area > prev_area * 1.2, "tier %d is bigger than tier %d (area %.0f)" % [t, t - 1, o.area])
-		ok(o.samples.size() >= 20, "tier %d has buoyancy samples" % t)
-		ok(o.sprite != null, "tier %d has its Layer sprite" % t)
-		prev_area = o.area
-		o.free()
+	ok(Cfg.level_count() == 3, "three levels")
+	for lv in Cfg.level_count():
+		Cfg.set_level(lv)
+		var id := Cfg.level_id()
+		ok(Cfg.max_tier() == 9, "%s has nine tiers" % id)
+		ok(ResourceLoader.exists("res://assets/processed/" + str(Cfg.level_def().background)), "%s background exists" % id)
+		var prev_area := 0.0
+		var names := {}
+		for t in range(1, 10):
+			var o := FlushObject.create(t, null)
+			near(o.area, Cfg.tier_area(t), Cfg.tier_area(t) * 0.04, "%s tier %d is scaled to the size curve" % [id, t])
+			ok(o.area > prev_area * 1.3, "%s tier %d bigger than tier %d" % [id, t, t - 1])
+			ok(o.samples.size() >= 20, "%s tier %d has buoyancy samples" % [id, t])
+			ok(o.sprite != null, "%s tier %d has its Layer sprite" % [id, t])
+			names[o.def.name] = true
+			prev_area = o.area
+			o.free()
+		ok(names.size() == 9, "%s: nine different objects" % id)
+		Cfg.set_level(0)
+	# the royal object is creatable: two tier-8 objects fit in the bowl side by side
+	var d8 := 2.0 * sqrt(Cfg.tier_area(8) / PI)
+	ok(2.0 * d8 < Cfg.geo.width_at(Cfg.bowl.rest_level_y), "two tier-8 objects fit side by side")
 	var g := Game.new()
 	g.rng.seed = 99
 	var seen := {}
@@ -119,7 +143,7 @@ func test_tiers_and_spawning() -> void:
 	g.free()
 
 func test_scoring_rules() -> void:
-	for t in range(1, 6):
+	for t in range(1, 9):
 		ok(Cfg.flush_points(t + 1) >= 2 * Cfg.flush_points(t), "flush reward grows exponentially (tier %d)" % (t + 1))
 		ok(Cfg.merge_points(t + 1) < Cfg.flush_points(t + 1) / 2, "merging gives small points (tier %d)" % (t + 1))
 		# the core decision: merging two and flushing the result beats flushing both now
@@ -278,15 +302,11 @@ func test_merge_once() -> void:
 
 func test_merge_chain_and_max_tier() -> void:
 	await new_game()
-	for i in 3:
-		game.make_object(1, Vector2(480 + i * 60, 900 - i * 120))
+	game.make_object(9, Vector2(400, 900))
+	game.make_object(9, Vector2(700, 900))
 	await seconds(3.0)
-	ok(count_tier(1) == 1 and count_tier(2) == 1, "three ducks -> one tier 2 + one duck (got t1=%d t2=%d)" % [count_tier(1), count_tier(2)])
-	await new_game()
-	game.make_object(6, Vector2(400, 900))
-	game.make_object(6, Vector2(700, 900))
-	await seconds(3.0)
-	ok(count_tier(6) == 2, "max-tier objects never merge")
+	ok(count_tier(9) == 2, "max-tier objects never merge")
+	ok(game.state == Game.State.PLAY, "placing max-tier objects is not a royal flush (only merging is)")
 
 # ------------------------------------------------------------------ water
 
@@ -330,7 +350,7 @@ func test_flush_moves_and_removes() -> void:
 	var lowest := lvl0
 	var moved := 0.0
 	var full := false
-	for i in int((float(Cfg.c.flush.duration) + float(Cfg.c.flush.siphon_tail)) * 60.0) + 30:
+	for i in int((float(Cfg.c.flush.duration) + float(Cfg.c.flush.siphon_tail)) * 60.0) + 15:
 		await get_tree().physics_frame
 		lowest = maxf(lowest, game.water.level_y)
 		full = full or game.water.strength() > 0.99
@@ -350,7 +370,7 @@ func test_flush_moves_and_removes() -> void:
 
 func test_blockage_restricts_drainage() -> void:
 	await new_game()
-	var gold := game.make_object(6, Vector2(540, 1250))
+	var gold := game.make_object(9, Vector2(540, 1250))
 	await seconds(4.0)
 	ok(game.water.blockage > 0.8, "golden toilet blocks the drain (blockage %.2f)" % game.water.blockage)
 	ok(game.water.plug == gold, "golden toilet is detected as the plug")
@@ -368,16 +388,17 @@ func test_blockage_restricts_drainage() -> void:
 	ok(game.water.level_y > free0 + 60.0, "unblocked flush lowers the water (%.0f -> %.0f)" % [free0, game.water.level_y])
 
 func test_every_tier_flushable() -> void:
-	for t in range(1, 7):
-		await new_game()
-		var o := game.make_object(t, Vector2(540 + (t % 2) * 40, 1000))
-		await seconds(3.0)
-		var oid := o.get_instance_id()
-		var n := await flush_until(func(): return not is_instance_id_valid(oid), 5)
-		ok(not is_instance_id_valid(oid), "tier %d can be flushed (took %d flushes)" % [t, n])
-		ok(game.stats.flushed.get(t, 0) == 1, "tier %d flush scored" % t)
-		ok(not game.game_over, "flushing a lone tier %d does not flood the toilet" % t)
-		print("  tier %d flushed after %d flush(es), squeezed=%d" % [t, n, game.stats.squeezed])
+	for lv in 3:
+		for t in range(1, 10):
+			await new_game(false, lv)
+			var o := game.make_object(t, Vector2(540 + (t % 2) * 40, 1000))
+			await seconds(3.0)
+			var oid := o.get_instance_id()
+			var n := await flush_until(func(): return not is_instance_id_valid(oid), 6)
+			ok(not is_instance_id_valid(oid), "%s tier %d can be flushed (took %d flushes)" % [Cfg.level_id(), t, n])
+			ok(game.stats.flushed.get(t, 0) == 1, "%s tier %d flush scored" % [Cfg.level_id(), t])
+			ok(not game.game_over, "flushing a lone %s tier %d does not flood the toilet" % [Cfg.level_id(), t])
+			print("  %s tier %d flushed after %d flush(es)" % [Cfg.level_id(), t, n])
 
 func test_overflow_game_over() -> void:
 	await new_game()
@@ -391,7 +412,7 @@ func test_overflow_game_over() -> void:
 	ok(not game.game_over, "a short splash over the line is forgiven")
 	ok(game.over_t < 0.5, "overflow timer recovers")
 	# sustained overflow: blocked toilet, keep the water up
-	var gold := game.make_object(6, Vector2(540, 1250))
+	var gold := game.make_object(9, Vector2(540, 1250))
 	await seconds(3.0)
 	w.volume = Cfg.geo.volume_at_level(Cfg.bowl.overflow_y - 60)
 	await seconds(float(Cfg.c.overflow.grace_time) + 0.6)
@@ -399,6 +420,123 @@ func test_overflow_game_over() -> void:
 	ok(game.hud.restart_button.visible, "restart button shown")
 	ok(not game.launcher.enabled, "no throwing after game over")
 	ok(is_instance_valid(gold), "scene still alive after game over")
+
+# ------------------------------------------------------------------ PoC 2: earned flush, triple merge, chain, royal flush
+
+func test_flush_charges() -> void:
+	await new_game(false, 0, true)
+	ok(game.charges == int(Cfg.c.meter.start_charges), "level starts with %d flush charge(s)" % game.charges)
+	ok(game.request_flush(), "a stored charge flushes")
+	ok(game.charges == 0, "the flush used the charge")
+	await seconds(float(Cfg.c.flush.duration) + float(Cfg.c.flush.siphon_tail) + 1.0)
+	ok(not game.request_flush(), "no charge, no flush")
+	ok(not game.water.flushing(), "water untouched without a charge")
+	var m0 := game.meter
+	game.make_object(1, Vector2(500, 900))
+	var b := game.make_object(1, Vector2(520, 760))
+	b.linear_velocity = Vector2(0, 500)
+	await seconds(1.0)
+	ok(game.meter > m0, "a merge fills the flush meter (%.2f -> %.2f)" % [m0, game.meter])
+	game.add_meter(1.0)
+	ok(game.charges == 1, "a full meter becomes a charge")
+	game.add_meter(10.0)
+	ok(game.charges == int(Cfg.c.meter.max_charges), "charges are capped at %d" % game.charges)
+	ok(game.request_flush(), "earned charge flushes")
+
+func test_triple_merge() -> void:
+	await new_game()
+	var r := sqrt(Cfg.tier_area(2) / PI)
+	var objs: Array = []
+	for i in 3:    # three toilet paper rolls dropped onto each other
+		objs.append(game.make_object(2, Vector2(540 + (i - 1) * r * 1.6, 1000 - i * 30)))
+	objs[1].linear_velocity = Vector2(0, 400)
+	await seconds(2.0)
+	ok(game.stats.triples == 1, "three matching objects make a TRIPLE MERGE (triples=%d)" % game.stats.triples)
+	ok(count_tier(2) == 0, "all three were consumed")
+	ok(count_tier(3) == 2 or count_tier(4) == 1, "...into TWO next-tier objects (t3=%d, t4=%d after a follow-up merge)" % [count_tier(3), count_tier(4)])
+	# a lone pair stays a normal merge
+	await new_game()
+	game.make_object(2, Vector2(300, 1000))
+	var b := game.make_object(2, Vector2(310, 860))
+	b.linear_velocity = Vector2(0, 400)
+	await seconds(1.5)
+	ok(game.stats.triples == 0 and count_tier(3) == 1, "a pair is still one merge")
+
+func test_chain() -> void:
+	await new_game()
+	var x := game.make_object(1, Vector2(300, 1000))
+	var y := game.make_object(1, Vector2(388, 1000))
+	var u := game.make_object(1, Vector2(700, 1000))
+	var v := game.make_object(1, Vector2(788, 1000))
+	for o in [x, y, u, v]:
+		o.gravity_scale = 0.0
+	x.linear_velocity = Vector2(500, 0)
+	await seconds(0.5)
+	var after_first := game.score
+	u.linear_velocity = Vector2(500, 0)
+	await seconds(0.5)
+	ok(game.chain == 2, "a second merge inside the window is a chain (chain=%d)" % game.chain)
+	ok(game.score - after_first > Cfg.merge_points(2), "chained merge pays more (%d > %d)" % [game.score - after_first, Cfg.merge_points(2)])
+	for o in game.objects.duplicate():     # the chain results would fall in and merge again: clear the bowl
+		game.remove_object(o)
+	await seconds(float(Cfg.c.chain.window) + 0.5)
+	game.make_object(2, Vector2(540, 1000))
+	var w := game.make_object(2, Vector2(560, 860))
+	w.linear_velocity = Vector2(0, 400)
+	await seconds(1.0)
+	ok(game.chain == 1, "the chain resets after the window")
+
+func test_royal_flush_and_levels() -> void:
+	for lv in 3:
+		await new_game(false, lv)
+		ok(game.discovered.size() == 3, "%s: the three spawn tiers are known at the start" % Cfg.level_id())
+		for t in [1, 2, 3, 2, 1]:
+			game.make_object(t, Vector2(300 + t * 90, 1100))
+		await seconds(2.0)
+		var before := game.score
+		var a := game.make_object(8, Vector2(380, 650))
+		var b := game.make_object(8, Vector2(720, 650))
+		a.linear_velocity = Vector2(500, 0)
+		b.linear_velocity = Vector2(-500, 0)
+		var started := false
+		for i in 60 * 3:
+			await get_tree().physics_frame
+			if game.state == Game.State.ROYAL:
+				started = true
+				break
+		ok(started, "%s: merging two tier-8 objects starts the ROYAL FLUSH" % Cfg.level_id())
+		ok(game.discovered.has(9), "%s: the royal object is discovered" % Cfg.level_id())
+		ok(not game.launcher.enabled, "no throwing during the royal flush")
+		var done := false
+		for i in 60 * 20:
+			await get_tree().physics_frame
+			if game.state != Game.State.ROYAL:
+				done = true
+				break
+		ok(done, "%s: the royal flush ends" % Cfg.level_id())
+		ok(game.objects.is_empty(), "%s: the royal flush empties the bowl (%d left)" % [Cfg.level_id(), game.objects.size()])
+		ok(game.score - before >= Cfg.flush_points(9) * int(Cfg.c.royal.multiplier), "%s: royal flush pays x%d (%d)" % [Cfg.level_id(), Cfg.c.royal.multiplier, game.score - before])
+		ok(not game.game_over, "%s: no game over during the royal flush" % Cfg.level_id())
+		near(Engine.time_scale, 1.0, 0.001, "slow motion is over")
+		ok(game.hud.restart_button.visible, "%s: end panel shown" % Cfg.level_id())
+		var score := game.score
+		if lv < 2:
+			ok(game.state == Game.State.LEVEL_DONE, "%s: level complete" % Cfg.level_id())
+			ok(game.hud.restart_button.text == "NEXT LEVEL", "button says NEXT LEVEL")
+			game._on_panel_button()
+			ok(Game.carry.get("level", -1) == lv + 1 and Game.carry.get("score", -1) == score, "NEXT LEVEL carries the score into level %d" % (lv + 2))
+		else:
+			ok(game.state == Game.State.VICTORY, "last level: victory")
+			ok(game.hud.restart_button.text == "PLAY AGAIN", "button says PLAY AGAIN")
+			game._on_panel_button()
+			ok(Game.carry.is_empty(), "PLAY AGAIN starts a fresh run")
+	# game over -> retry the same level with the score it started with
+	await new_game(false, 1)
+	game.score = 500
+	game.end_game()
+	ok(game.hud.restart_button.text == "RETRY LEVEL", "game over offers RETRY LEVEL")
+	game._on_panel_button()
+	ok(Game.carry.get("level", -1) == 1 and Game.carry.get("score", -1) == 0, "retry restarts the level with its starting score")
 
 func test_project_and_export() -> void:
 	ok(ProjectSettings.get_setting("display/window/handheld/orientation") == 1, "portrait orientation")

@@ -1,6 +1,6 @@
 {
  "_doc": "Every Layer generation used by the game (provenance + cost). Model gpt-image-2.5-flare, quality medium, batch_size 1, priced with estimate_forge_price before running. Workspace 2f56243b-eef9-40c6-a060-8e7c186b0d35, Layer session a51c029f-36c1-4c75-bb35-bc8739852024.",
- "total_cost_creative_units": 4.709,
+ "total_cost_creative_units": 17.952,
  "jobs": [
   {
    "job_id": "bowl_background",
@@ -17,7 +17,7 @@
    "size": "864x1536",
    "cost_creative_units": 2.159,
    "local_source": "assets/source/bowl_background_raw.png",
-   "runtime": "assets/processed/background.jpg",
+   "runtime": "assets/processed/bg_bathroom.jpg",
    "prompt": "Image 1 is a flat layout guide. Repaint it as a finished portrait mobile game background in a colorful, clean, slightly ridiculous cartoon style with thick dark outlines and simple cel shading. Keep the toilet's exact silhouette, position, size and proportions from Image 1 ... cut-away side view, EMPTY bowl interior, no water ... mint-green tiled bathroom wall, wooden floor strip, calm upper third, small decorations only near the edges. No water, no objects, no text, no logos, no people, no toilet seat or lid. (full text in the Layer session)"
   },
   {
@@ -27,8 +27,110 @@
    "size": "1536x1024",
    "cost_creative_units": 2.55,
    "local_source": "assets/source/objects_sheet_raw.png",
-   "runtime": "assets/processed/objects/tier_1..6.png",
+   "runtime": "assets/processed/levels/bathroom/tier_1..5.png + tier_9.png",
    "prompt": "Game sprite sheet of six separate cartoon bathroom items for a physics merging game ... 3 by 2 grid ... 1) yellow rubber duck facing right 2) upright toilet paper roll 3) tall teal-blue shampoo bottle 4) upright plunger, red cup, wooden handle 5) worn brown leather boot, toe right 6) small shiny gold toilet, tank left ... flat solid pure magenta (#FF00FF) background, no shadows, no text, no pink or magenta on the items. (full text in the Layer session)"
+  },
+  {
+   "job_id": "bathroom_extra",
+   "poc": 2,
+   "inference_id": "c9d7ddb1-de52-41ce-8d06-0d192bdfb5bb",
+   "output_file_id": "a71a4277-4bfa-47d7-9b4f-cdf4200fd93f",
+   "guidance": [
+    {
+     "file_id": "d810927d-827c-4b27-814c-5f1655928861",
+     "type": "reference_image",
+     "note": "PoC 1 object sheet as style reference"
+    }
+   ],
+   "size": "1536x512",
+   "cost_creative_units": 1.275,
+   "local_source": "assets/source/bathroom_extra_raw.png",
+   "runtime": "assets/processed/levels/bathroom/tier_6..8.png",
+   "prompt": "Style of Image 1 ... one row of three NEW bathroom items: 1) chunky retro bathroom scale with a dial 2) white front-loading washing machine with a sock in the window 3) white clawfoot bathtub with golden lion feet and bubble foam ... flat magenta background, no text, no pink/magenta on items."
+  },
+  {
+   "job_id": "kitchen_sheet",
+   "poc": 2,
+   "inference_id": "257e8855-3d3d-43f3-93d7-c7484bdd615b",
+   "output_file_id": "e7325ac4-3c7e-4bae-9ac6-fb080074156e",
+   "guidance": [
+    {
+     "file_id": "d810927d-827c-4b27-814c-5f1655928861",
+     "type": "reference_image",
+     "note": "PoC 1 object sheet as style reference"
+    }
+   ],
+   "size": "1536x1536",
+   "cost_creative_units": 3.825,
+   "local_source": "assets/source/kitchen_sheet_raw.png",
+   "runtime": "assets/processed/levels/kitchen/tier_1..9.png",
+   "prompt": "Style of Image 1 ... 3x3 grid of nine KITCHEN items: cherry tomato, fried egg, banana / frying pan, teapot, roast chicken / retro microwave, retro fridge, three-tier wedding cake with a golden crown ... flat magenta background."
+  },
+  {
+   "job_id": "palace_sheet",
+   "poc": 2,
+   "inference_id": "05e6b5d5-54a4-4f65-a8b6-92ae995e8431",
+   "output_file_id": "02ebbf18-9f8c-46b0-aad9-4d9b7cee98ad",
+   "guidance": [
+    {
+     "file_id": "d810927d-827c-4b27-814c-5f1655928861",
+     "type": "reference_image",
+     "note": "PoC 1 object sheet as style reference"
+    }
+   ],
+   "size": "1536x1536",
+   "cost_creative_units": 3.825,
+   "local_source": "assets/source/palace_sheet_raw.png",
+   "runtime": "assets/processed/levels/palace/tier_1..9.png",
+   "prompt": "Style of Image 1 ... 3x3 grid of nine ROYAL PALACE items: gold coin, diamond ring, golden goblet / scepter, crown, knight helmet / treasure chest, suit of armour, royal throne ... flat magenta background, red and blue instead of pink."
+  },
+  {
+   "job_id": "kitchen_background",
+   "poc": 2,
+   "inference_id": "66ca9042-8c21-4f27-b9f1-0d98bb63ba5c",
+   "output_file_id": "7c60bc00-63cb-420d-828a-e2d988e4990f",
+   "guidance": [
+    {
+     "file_id": "65816a7b-8d8e-4120-a9bd-146cb1eb214e",
+     "type": "init_image",
+     "weight": 0.85,
+     "local": "assets/source/guide/bowl_guide_kitchen.png"
+    },
+    {
+     "file_id": "0936f2e6-8352-4bd1-97e9-03969fe6d07f",
+     "type": "reference_image",
+     "note": "bathroom background as style reference"
+    }
+   ],
+   "size": "864x1536",
+   "cost_creative_units": 2.159,
+   "local_source": "assets/source/bowl_background_kitchen_raw.png",
+   "runtime": "assets/processed/bg_kitchen.jpg",
+   "prompt": "Repaint guide in the style of Image 2, same exact toilet silhouette ... toilet standing in a retro diner kitchen, butter-yellow tiles, red/white checkered floor, copper pots and jars near the edges."
+  },
+  {
+   "job_id": "palace_background",
+   "poc": 2,
+   "inference_id": "c42963de-6f30-41c3-aec5-00174f14cc4f",
+   "output_file_id": "e72cef83-c0d9-49ef-8ace-811e35df8b86",
+   "guidance": [
+    {
+     "file_id": "8cb61b62-98b3-4d9e-934b-d736a0eff762",
+     "type": "init_image",
+     "weight": 0.85,
+     "local": "assets/source/guide/bowl_guide_palace.png"
+    },
+    {
+     "file_id": "0936f2e6-8352-4bd1-97e9-03969fe6d07f",
+     "type": "reference_image",
+     "note": "bathroom background as style reference"
+    }
+   ],
+   "size": "864x1536",
+   "cost_creative_units": 2.159,
+   "local_source": "assets/source/bowl_background_palace_raw.png",
+   "runtime": "assets/processed/bg_palace.jpg",
+   "prompt": "Repaint guide in the style of Image 2, same exact toilet silhouette with gold trim ... royal blue damask throne room, marble floor, crown banner and candelabra near the edges."
   }
  ]
 }

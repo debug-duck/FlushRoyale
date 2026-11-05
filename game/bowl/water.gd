@@ -27,6 +27,7 @@ var level_y := 0.0
 var rest_y := 0.0
 var overflow_y := 0.0
 var flush_t := -1.0
+var _dur := 3.0                       # vortex length of the current flush (the royal flush is longer)
 var cooldown := 0.0
 var blockage := 0.0
 var pressure := 0.0
@@ -71,9 +72,10 @@ func flush_ready_frac() -> float:
 		return 0.0
 	return 1.0 - clampf(cooldown / maxf(fl.cooldown, 0.01), 0.0, 1.0)
 
-func start_flush() -> bool:
+func start_flush(duration := -1.0) -> bool:
 	if not can_flush():
 		return false
+	_dur = duration if duration > 0.0 else float(fl.duration)
 	flush_t = 0.0
 	flushes += 1
 	bowl.set_gate_open(true)
@@ -84,12 +86,12 @@ func start_flush() -> bool:
 func siphon() -> float:
 	if not flushing():
 		return 0.0
-	return clampf(minf(flush_t / float(fl.ramp_in), (float(fl.duration) + float(fl.siphon_tail) - flush_t) / 0.3), 0.0, 1.0)
+	return clampf(minf(flush_t / float(fl.ramp_in), (_dur + float(fl.siphon_tail) - flush_t) / 0.3), 0.0, 1.0)
 
 func strength() -> float:
-	if not flushing() or flush_t > float(fl.duration):
+	if not flushing() or flush_t > _dur:
 		return 0.0
-	var d: float = fl.duration
+	var d: float = _dur
 	if flush_t < fl.ramp_in:
 		return flush_t / fl.ramp_in
 	if flush_t > d - fl.ramp_out:
@@ -129,10 +131,10 @@ func _update_flow(dt: float) -> void:
 	if flushing():
 		if flush_t < fl.inflow_time:
 			volume += float(fl.inflow_total) / float(fl.inflow_time) * dt
-		if flush_t < fl.duration:
+		if flush_t < _dur:
 			volume = maxf(0.0, volume - float(fl.outflow_rate) * (1.0 - blockage) * dt)
 		flush_t += dt
-		if flush_t >= float(fl.duration) + float(fl.siphon_tail):
+		if flush_t >= _dur + float(fl.siphon_tail):
 			flush_t = -1.0
 			cooldown = fl.cooldown
 	else:
@@ -252,16 +254,28 @@ func _update_squeeze(dt: float) -> void:
 	var s := strength()
 	pressure = s * (1.0 + float(dr.max_pressure_bonus) * clampf(fill_frac(), 0.0, 1.0))
 	for o: FlushObject in game.objects:
-		o.is_plug = (o == plug)
-		if o != plug and not o.passing:
+		if o.passing:
+			continue
+		# the sealing plug, or anything too wide for the drain that the current holds against the throat
+		var stuck := o == plug and o.linear_velocity.length() < float(dr.plug_max_speed) * 1.5
+		stuck = stuck or (s > 0.0 and _lodged(o))
+		o.is_plug = o == plug or (stuck and s > 0.0)
+		if s > 0.0 and stuck:
+			o.squeeze += dt * pressure / float(o.def.resistance)
+			if o.squeeze >= 1.0:
+				o.squeeze = 1.0
+				o.start_passing()
+				squeezed.emit(o)
+				if o == plug:
+					plug = null
+		else:
 			o.squeeze = maxf(0.0, o.squeeze - float(dr.squeeze_decay) * dt)
-	if plug and s > 0.0 and plug.linear_velocity.length() < float(dr.plug_max_speed) * 1.5:
-		plug.squeeze += dt * pressure / float(plug.def.resistance)
-		if plug.squeeze >= 1.0:
-			plug.squeeze = 1.0
-			plug.start_passing()
-			squeezed.emit(plug)
-			plug = null
+
+## Held at the throat by the flush current: near the drain, wider than it, not flying past.
+func _lodged(o: FlushObject) -> bool:
+	var p := o.global_position
+	return p.y > geo.throat_y - float(dr.lodge_zone) and p.y < geo.throat_y + 60.0 and absf(p.x - geo.cx) < geo.drain_w \
+		and o.extent_x() > geo.drain_w * 0.95 and o.linear_velocity.length() < float(dr.lodge_max_speed)
 
 func _update_gate(dt: float) -> void:
 	if flushing() or not bowl.gate_open():

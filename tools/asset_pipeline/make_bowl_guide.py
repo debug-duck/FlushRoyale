@@ -21,20 +21,28 @@ def sc(pts):
     return [(x * S, y * S) for x, y in pts]
 
 
-def guide():
+THEMES = {  # wall, grout, floor (the guide only hints the palette; Layer paints the theme)
+    "bathroom": ((190, 228, 218), (170, 210, 200), (214, 168, 118)),
+    "kitchen": ((246, 226, 160), (226, 200, 130), (200, 70, 60)),
+    "palace": ((70, 90, 160), (60, 78, 140), (150, 110, 60)),
+}
+
+
+def guide(theme="bathroom"):
     b = G.load()
     cx = b["center_x"]
     inner = G.inner_left(b)
     throat = inner[-1]
     floor = b["floor_y"]
-    img = Image.new("RGB", (W, H), (190, 228, 218))
+    wall, grout, floor_col = THEMES[theme]
+    img = Image.new("RGB", (W, H), wall)
     d = ImageDraw.Draw(img)
     # wall tiles + floor
     tile = 120 * S
     for i in range(0, 20):
-        d.line([(0, i * tile), (W, i * tile)], fill=(170, 210, 200), width=3)
-        d.line([(i * tile, 0), (i * tile, H)], fill=(170, 210, 200), width=3)
-    d.rectangle([0, floor * S, W, H], fill=(214, 168, 118))
+        d.line([(0, i * tile), (W, i * tile)], fill=grout, width=3)
+        d.line([(i * tile, 0), (i * tile, H)], fill=grout, width=3)
+    d.rectangle([0, floor * S, W, H], fill=floor_col)
     d.line([(0, floor * S), (W, floor * S)], fill=(60, 45, 40), width=6)
     # left porcelain wall: rim slope -> inner wall -> outlet -> pedestal -> outer wall
     outer = []
@@ -63,8 +71,9 @@ def guide():
     d.line([(throat[0] * S, throat[1] * S), (throat[0] * S, floor * S)], fill=outline, width=6)
     d.line([((2 * cx - throat[0]) * S, throat[1] * S), ((2 * cx - throat[0]) * S, floor * S)], fill=outline, width=6)
     os.makedirs(OUT, exist_ok=True)
-    img.save(os.path.join(OUT, "bowl_guide.png"))
-    print("wrote", os.path.join(OUT, "bowl_guide.png"))
+    name = "bowl_guide.png" if theme == "bathroom" else "bowl_guide_%s.png" % theme
+    img.save(os.path.join(OUT, name))
+    print("wrote", os.path.join(OUT, name))
 
 
 def overlay(path):
@@ -86,5 +95,7 @@ def overlay(path):
 if __name__ == "__main__":
     if len(sys.argv) > 2 and sys.argv[1] == "--overlay":
         overlay(sys.argv[2])
+    elif len(sys.argv) > 2 and sys.argv[1] == "--theme":
+        guide(sys.argv[2])
     else:
         guide()

@@ -11,11 +11,42 @@
     "preview_time": 1.6,
     "preview_dot_every": 3
   },
-  "spawn_weights": [45, 35, 20],
+  "tiers": {
+    "_doc": "Size curve shared by every level: tier t covers base_area * ratio^(t-1) px^2 (1.45 => tier 9 ~19x tier 1). resistance[t-1] = seconds at full drain pressure to squeeze a plug of that tier through.",
+    "base_area": 3900,
+    "ratio": 1.45,
+    "resistance": [0.6, 0.6, 0.7, 1.0, 1.4, 2.0, 2.6, 3.2, 4.0]
+  },
   "merge": {
     "momentum_kept": 0.85,
     "grow_from": 0.72,
-    "grow_time": 0.16
+    "grow_time": 0.16,
+    "_triple_doc": "TRIPLE MERGE: a pair waits triple_window s before merging; a third matching object that touches either (or rests within triple_pad px) joins and the three become TWO next-tier objects.",
+    "triple_window": 0.14,
+    "triple_pad": 16
+  },
+  "chain": {
+    "_doc": "Merges less than `window` s apart build a chain; multiplier = min(max_mult, 1 + step*(chain-1)) on merge points AND flush-meter gain (banked cascades).",
+    "window": 1.6,
+    "step": 0.5,
+    "max_mult": 4.0
+  },
+  "meter": {
+    "_doc": "Flush is an earned ability: merges fill the meter (per_merge + tier_bonus*(new_tier-2), x chain multiplier, + triple_bonus); a full meter = +1 flush charge.",
+    "per_merge": 0.09,
+    "tier_bonus": 0.03,
+    "triple_bonus": 0.35,
+    "start_charges": 1,
+    "max_charges": 3
+  },
+  "royal": {
+    "_doc": "ROYAL FLUSH: creating the last tier of a level. Slow-mo for `delay` s, then a long vortex while every object is released into the drain one by one (`stagger` s, nearest first) and scored x multiplier. `timeout` s later stragglers are scored and removed and the level is complete.",
+    "delay": 1.4,
+    "slowmo": 0.35,
+    "duration": 5.0,
+    "stagger": 0.16,
+    "multiplier": 3,
+    "timeout": 9.0
   },
   "water": {
     "density": 1.0,
@@ -32,7 +63,7 @@
   },
   "flush": {
     "duration": 3.0,
-    "cooldown": 3.0,
+    "cooldown": 0.6,
     "inflow_total": 110000,
     "inflow_time": 1.8,
     "outflow_rate": 95000,
@@ -57,6 +88,8 @@
     "plug_line_cover": 0.45,
     "plug_seal": 0.88,
     "plug_max_speed": 140,
+    "lodge_zone": 170,
+    "lodge_max_speed": 420,
     "squeeze_decay": 0.06,
     "max_pressure_bonus": 1.2,
     "pass_speed": 950
@@ -67,6 +100,6 @@
   "score": {
     "merge_base": 2,
     "flush_base": 10,
-    "flush_mult": 3
+    "flush_mult": 2.5
   }
 }

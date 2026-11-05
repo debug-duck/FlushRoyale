@@ -23,7 +23,7 @@ jobs:
       - name: Acceptance tests
         run: godot --headless --path . --fixed-fps 60 tests/run_tests.tscn
       - name: Bot probe (balance / stability report)
-        run: godot --headless --path . --fixed-fps 60 tests/bot_probe.tscn -- --games=2 --cap=240
+        run: godot --headless --path . --fixed-fps 60 tests/bot_probe.tscn -- --games=1 --cap=300 --policy=danger
 
   android-debug-apk:
     name: Android debug APK

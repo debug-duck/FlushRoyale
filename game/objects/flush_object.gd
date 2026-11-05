@@ -1,11 +1,11 @@
 class_name FlushObject
 extends RigidBody2D
-## One throwable/mergeable bathroom object. Collision = hand-authored shapes from data/objects.json; the Layer sprite is
-## fitted on top. A grid of sample points (equal area each) gives buoyancy, displacement and vortex forces that act at
+## One throwable/mergeable object of the current level. Collision = shapes from data/levels.json (hand-authored) or
+## data/shapes_generated.json, scaled so the tier covers Cfg.tier_area(t); the Layer sprite is fitted on top. A grid of sample points (equal area each) gives buoyancy, displacement and vortex forces that act at
 ## the right place, so torques (upside-down ducks, plungers floating handle-up) emerge from the physics.
 
 const SAMPLE_TARGET := 40
-static var _geometry_cache := {}       # tier -> {area, samples}: the grid scan is too slow to redo on every merge
+static var _geometry_cache := {}       # "level:tier" -> {scale, area, samples}: the grid scan is too slow to redo per merge
 
 var tier := 1
 var def: Dictionary
@@ -42,21 +42,27 @@ func _setup(t: int) -> void:
 	tier = t
 	def = Cfg.tier(t)
 	name = "T%d_%s" % [t, str(def.name).replace(" ", "")]
-	var sc: float = def.get("scale", 1.0)
-	for s in def.shapes:
-		_add_shape(s, sc)
-	if not _geometry_cache.has(t):
+	var key := "%s:%d" % [Cfg.level_id(), t]
+	if not _geometry_cache.has(key):
+		_build_shapes(1.0)                      # raw units -> measure, then rebuild at the size the curve asks for
 		_compute_area_and_samples()
-		_geometry_cache[t] = {"area": area, "samples": samples}
-	area = _geometry_cache[t].area
-	samples = _geometry_cache[t].samples
+		var k := sqrt(Cfg.tier_area(t) / maxf(area, 1.0))
+		_clear_shapes()
+		_build_shapes(k)
+		_compute_area_and_samples()
+		_geometry_cache[key] = {"scale": k, "area": area, "samples": samples}
+	else:
+		_build_shapes(_geometry_cache[key].scale)
+	var sc: float = _geometry_cache[key].scale
+	area = _geometry_cache[key].area
+	samples = _geometry_cache[key].samples
 	mass = maxf(0.05, float(def.density) * area / 1000.0)
 	if def.has("com"):
 		center_of_mass_mode = RigidBody2D.CENTER_OF_MASS_MODE_CUSTOM
 		center_of_mass = Vector2(def.com[0], def.com[1]) * sc
 	var pm := PhysicsMaterial.new()
 	pm.friction = 0.45
-	pm.bounce = 0.3 if t == 1 else 0.12
+	pm.bounce = float(def.get("bounce", 0.12))
 	physics_material_override = pm
 	continuous_cd = RigidBody2D.CCD_MODE_CAST_SHAPE
 	contact_monitor = true
@@ -68,7 +74,7 @@ func _setup(t: int) -> void:
 	can_sleep = false
 	collision_layer = Cfg.LAYER_OBJECTS
 	collision_mask = Cfg.LAYER_BOWL | Cfg.LAYER_OBJECTS | Cfg.LAYER_DRAIN
-	var path := "res://assets/processed/objects/" + str(def.sprite.file)
+	var path := "res://assets/processed/" + str(def.sprite.file)
 	if ResourceLoader.exists(path):
 		sprite = Sprite2D.new()
 		sprite.texture = load(path)
@@ -78,6 +84,19 @@ func _setup(t: int) -> void:
 		add_child(sprite)
 	body_entered.connect(_on_body_entered)
 	born = Time.get_ticks_msec() / 1000.0
+
+func _build_shapes(sc: float) -> void:
+	for s in def.shapes:
+		_add_shape(s, sc)
+
+func _clear_shapes() -> void:
+	for n in _shape_nodes:
+		n.free()
+	_shape_nodes.clear()
+	_shape_pos.clear()
+	_shapes_local.clear()
+	hull.clear()
+	samples.clear()
 
 func _add_shape(s: Dictionary, sc: float) -> void:
 	var cs := CollisionShape2D.new()
@@ -199,10 +218,13 @@ func start_pop(grow_from: float) -> void:
 	_pop_t = 0.0
 	_apply_grow()
 
-func start_passing() -> void:
+## Squeezed through the drain by pressure (ignores the drain layer). In the ROYAL FLUSH everything also ignores the
+## other objects, so the whole bowl pours down the drain.
+func start_passing(royal_flush := false) -> void:
 	passing = true
 	is_plug = false
-	collision_mask = Cfg.LAYER_BOWL | Cfg.LAYER_OBJECTS
+	merging = false
+	collision_mask = Cfg.LAYER_BOWL if royal_flush else (Cfg.LAYER_BOWL | Cfg.LAYER_OBJECTS)
 
 func _apply_grow() -> void:
 	for i in _shape_nodes.size():

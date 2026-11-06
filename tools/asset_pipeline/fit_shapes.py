@@ -86,7 +86,8 @@ def fit(path):
 
 def main():
     with open(os.path.join(G.ROOT, "data", "levels.json")) as f:
-        levels = json.load(f)["levels"]
+        data = json.load(f)
+        levels = data["levels"] + data.get("bonus_levels", [])
     out = {}
     previews = []
     for lv in levels:

@@ -1,11 +1,17 @@
 extends Node
-## Autoload `Sfx`: tiny code-generated sound effects (no audio assets in the PoC). Each sound is synthesised once
-## into an AudioStreamWAV at start-up; a small player pool plays them with optional pitch variation.
+## Autoload `Sfx`: sound effects. The small ones are synthesised in code at start-up (pop, splash, launch, ...); the
+## bigger ones are Sonilo clips in assets/audio/*.ogg (emergency flush, drain gulp, clog clear, cascade stings, royal
+## fanfare, game-over sting, the rising-water loop). A small player pool plays one-shots; `set_danger()` drives the
+## rising-water loop volume and a procedural danger tick that speeds up as the water nears the overflow line.
 
 const RATE := 22050
 var streams := {}
 var players: Array[AudioStreamPlayer] = []
 var muted := false
+var _loop: AudioStreamPlayer
+var _tick_t := 0.0
+var _danger := 0.0
+var _cascade: AudioStreamPlayer
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -23,6 +29,20 @@ func _ready() -> void:
 	streams.clunk = _make(0.18, func(t, u): return (sin(TAU * 95.0 * t) + _noise() * 0.3) * pow(1.0 - u, 3.0) * 0.6)
 	streams.alarm = _make(0.25, func(t, u): return (1.0 if sin(TAU * 880.0 * t) > 0.0 else -1.0) * 0.18 * (1.0 if u < 0.8 else 0.0))
 	streams.gameover = _make(1.2, func(t, u): return sin(TAU * (300.0 - 220.0 * u) * t) * (1.0 - u) * 0.5)
+	streams.tick = _make(0.07, func(t, u): return sin(TAU * 1250.0 * t) * pow(1.0 - u, 2.0) * 0.35)
+	for f in DirAccess.get_files_at("res://assets/audio/"):
+		var n := f.trim_suffix(".import")
+		if n.ends_with(".ogg") and not streams.has(n.get_basename()):
+			streams[n.get_basename()] = load("res://assets/audio/" + n)
+	_cascade = AudioStreamPlayer.new()
+	add_child(_cascade)
+	_loop = AudioStreamPlayer.new()
+	_loop.volume_db = -80.0
+	add_child(_loop)
+	if streams.has("water_rising"):
+		var st: AudioStreamOggVorbis = streams.water_rising
+		st.loop = true
+		_loop.stream = st
 
 func play(id: String, pitch := 1.0, volume_db := 0.0) -> void:
 	if muted or not streams.has(id):
@@ -34,6 +54,54 @@ func play(id: String, pitch := 1.0, volume_db := 0.0) -> void:
 			p.volume_db = volume_db
 			p.play()
 			return
+
+## Cascade sting: the bigger the chain, the bigger the sting (and a little higher each step). Restarts, never stacks.
+func cascade(chain: int, triple := false) -> void:
+	if muted:
+		return
+	var id := "cascade_1"
+	if chain >= 6:
+		id = "cascade_3"
+	elif chain >= 4 or triple:
+		id = "cascade_2"
+	if not streams.has(id):
+		play("pop", 1.4)
+		return
+	_cascade.stream = streams[id]
+	_cascade.pitch_scale = 1.0 + 0.06 * clampi(chain - (6 if chain >= 6 else (4 if chain >= 4 else 2)), 0, 4)
+	_cascade.volume_db = -3.0
+	_cascade.play()
+
+## 0 = calm, 1 = about to overflow. `rising` = the water is currently going up.
+func set_danger(level: float, rising: bool) -> void:
+	_danger = clampf(level, 0.0, 1.2)
+	if not _loop.stream:
+		return
+	var target := -80.0
+	if rising and not muted:
+		target = lerpf(-22.0, -4.0, clampf(_danger, 0.0, 1.0))
+	if target > -79.0 and not _loop.playing:
+		_loop.play()
+	_loop.volume_db = lerpf(_loop.volume_db, target, 0.08)
+	if _loop.volume_db < -70.0 and _loop.playing and target < -79.0:
+		_loop.stop()
+
+func stop_danger() -> void:
+	_danger = 0.0
+	if _loop:
+		_loop.stop()
+		_loop.volume_db = -80.0
+
+func _process(dt: float) -> void:
+	# procedural danger tick: from 60 % full it ticks, faster and higher as the water climbs
+	if _danger < 0.6 or muted:
+		_tick_t = 0.0
+		return
+	_tick_t -= dt
+	if _tick_t <= 0.0:
+		var k := clampf((_danger - 0.6) / 0.4, 0.0, 1.0)
+		_tick_t = lerpf(0.9, 0.18, k)
+		play("tick", 1.0 + 0.5 * k, lerpf(-10.0, -2.0, k))
 
 func _noise() -> float:
 	return randf() * 2.0 - 1.0

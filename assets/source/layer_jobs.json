@@ -1,6 +1,6 @@
 {
- "_doc": "Every Layer generation used by the game (provenance + cost). Model gpt-image-2.5-flare, quality medium, batch_size 1, priced with estimate_forge_price before running. Workspace 2f56243b-eef9-40c6-a060-8e7c186b0d35, Layer session a51c029f-36c1-4c75-bb35-bc8739852024.",
- "total_cost_creative_units": 17.952,
+ "_doc": "Every Layer generation used by the game (provenance + cost). Images: gpt-image-2.5-flare, quality medium, batch_size 1, priced with estimate_forge_price before running. Workspace 2f56243b-eef9-40c6-a060-8e7c186b0d35, Layer session a51c029f-36c1-4c75-bb35-bc8739852024. PoC 3 audio: Sonilo SFX / Sonilo Music 1.1 (owner permission).",
+ "total_cost_creative_units": 39.527,
  "jobs": [
   {
    "job_id": "bowl_background",
@@ -131,6 +131,251 @@
    "local_source": "assets/source/bowl_background_palace_raw.png",
    "runtime": "assets/processed/bg_palace.jpg",
    "prompt": "Repaint guide in the style of Image 2, same exact toilet silhouette with gold trim ... royal blue damask throne room, marble floor, crown banner and candelabra near the edges."
+  },
+  {
+   "job_id": "dorm_background",
+   "poc": 3,
+   "inference_id": "63be8735-8bef-40ec-8ef7-8fa05d3235a3",
+   "output_file_id": "4196611a-8b68-4261-817b-8273292f2f3d",
+   "size": "864x1536",
+   "cost_creative_units": 2.159,
+   "local_source": "assets/source/bowl_background_dorm_raw.png",
+   "runtime": "assets/processed/bg_dorm.jpg",
+   "guidance": [
+    {
+     "file_id": "047de4bc-08cd-4784-ba04-cfe4e937334a",
+     "type": "init_image",
+     "weight": 0.85,
+     "local": "assets/source/guide/bowl_guide_dorm.png"
+    },
+    {
+     "file_id": "0936f2e6-8352-4bd1-97e9-03969fe6d07f",
+     "type": "reference_image"
+    }
+   ],
+   "prompt_summary": "Filthy student dormitory bathroom; chipped cracked toilet with duct tape; graffiti doodles, exposed pipes, bare bulb, pizza box."
+  },
+  {
+   "job_id": "whitehouse_background",
+   "poc": 3,
+   "inference_id": "0fd73958-c150-462c-8be1-8eca294c6ae0",
+   "output_file_id": "33e8b5ff-d2a4-438e-9855-249995c6e607",
+   "size": "864x1536",
+   "cost_creative_units": 2.159,
+   "local_source": "assets/source/bowl_background_whitehouse_raw.png",
+   "runtime": "assets/processed/bg_whitehouse.jpg",
+   "guidance": [
+    {
+     "file_id": "cc9bcbe7-2b25-43e6-8219-533c6e415848",
+     "type": "init_image",
+     "weight": 0.85,
+     "local": "assets/source/guide/bowl_guide_whitehouse.png"
+    },
+    {
+     "file_id": "0936f2e6-8352-4bd1-97e9-03969fe6d07f",
+     "type": "reference_image"
+    }
+   ],
+   "prompt_summary": "Luxurious presidential bathroom; marble toilet with gold trim and a generic eagle emblem; star curtains, flags, red carpet."
+  },
+  {
+   "job_id": "royal_background_v1_rejected",
+   "poc": 3,
+   "inference_id": "f9006bdb-58f2-40b0-ad1c-102dfc4a219c",
+   "output_file_id": "e3c2c262-35e6-434b-86f1-13f2f8a6cb01",
+   "size": "864x1536",
+   "cost_creative_units": 2.159,
+   "local_source": "(not kept)",
+   "runtime": "-",
+   "guidance": [
+    {
+     "file_id": "b87c5f86-973e-4bee-b0a2-9c03a7fd9256",
+     "type": "init_image",
+     "weight": 0.85,
+     "local": "assets/source/guide/bowl_guide_royal.png"
+    },
+    {
+     "file_id": "0936f2e6-8352-4bd1-97e9-03969fe6d07f",
+     "type": "reference_image"
+    }
+   ],
+   "prompt_summary": "Royal palace, throne-shaped toilet. Rejected: lower funnel painted ~40 px narrower than the collision."
+  },
+  {
+   "job_id": "royal_background",
+   "poc": 3,
+   "inference_id": "1ca44da9-9f5c-4b06-ad1a-4a7b56298abb",
+   "output_file_id": "5850761e-85ec-432f-a326-bb1d895d3b21",
+   "size": "864x1536",
+   "cost_creative_units": 2.159,
+   "local_source": "assets/source/bowl_background_royal_raw.png",
+   "runtime": "assets/processed/bg_royal.jpg (+ build_assets.py carve())",
+   "guidance": [
+    {
+     "file_id": "b87c5f86-973e-4bee-b0a2-9c03a7fd9256",
+     "type": "init_image",
+     "weight": 0.95,
+     "local": "assets/source/guide/bowl_guide_royal.png"
+    },
+    {
+     "file_id": "0936f2e6-8352-4bd1-97e9-03969fe6d07f",
+     "type": "reference_image"
+    }
+   ],
+   "prompt_summary": "Same, guide weight 0.95, explicit 'follow the inner outline'. Still slightly narrow at the funnel: fixed by carve() in the pipeline."
+  },
+  {
+   "job_id": "dorm_sheet",
+   "poc": 3,
+   "inference_id": "29be0570-67ab-4078-9a89-ba3b2ef61a53",
+   "output_file_id": "04e82b25-cd2a-4fa8-ac50-7f99e53c5821",
+   "size": "1536x1536",
+   "cost_creative_units": 3.825,
+   "local_source": "assets/source/dorm_sheet_raw.png",
+   "runtime": "assets/processed/levels/dorm/tier_1..9.png",
+   "guidance": [
+    {
+     "file_id": "d810927d-827c-4b27-814c-5f1655928861",
+     "type": "reference_image",
+     "note": "PoC 1 object sheet as style reference"
+    }
+   ],
+   "prompt_summary": "3x3: party cup, moldy pizza, radioactive sock / unopened textbook, emotional support plushie, laptop with 73 tabs / filthy couch, student debt monster, entire university."
+  },
+  {
+   "job_id": "whitehouse_sheet",
+   "poc": 3,
+   "inference_id": "55519e6f-a327-465d-840f-e612e93af2a4",
+   "output_file_id": "75f7f082-641c-4bcf-9407-35be27711892",
+   "size": "1536x1536",
+   "cost_creative_units": 3.825,
+   "local_source": "assets/source/whitehouse_sheet_raw.png",
+   "runtime": "assets/processed/levels/whitehouse/tier_1..9.png",
+   "guidance": [
+    {
+     "file_id": "d810927d-827c-4b27-814c-5f1655928861",
+     "type": "reference_image",
+     "note": "PoC 1 object sheet as style reference"
+    }
+   ],
+   "prompt_summary": "3x3: presidential pen, red hotline phone, TOP SECRET folders / ballot box, megaphone, nuclear football / bald eagle, Statue of Liberty, mini White House."
+  },
+  {
+   "job_id": "royal_sheet",
+   "poc": 3,
+   "inference_id": "a2cea238-de39-4d35-bc8a-f0f120a1bf10",
+   "output_file_id": "72cb5ecb-8433-4f90-887f-2f544ae23e43",
+   "size": "1536x1536",
+   "cost_creative_units": 3.825,
+   "local_source": "assets/source/royal_sheet_raw.png",
+   "runtime": "assets/processed/levels/royal/tier_1..9.png",
+   "guidance": [
+    {
+     "file_id": "d810927d-827c-4b27-814c-5f1655928861",
+     "type": "reference_image",
+     "note": "PoC 1 object sheet as style reference"
+    }
+   ],
+   "prompt_summary": "3x3: silver spoon, royal teapot, tiny crown / royal frog, palace guard, golden throne / royal horse, royal castle, the furious helpless King."
+  },
+  {
+   "job_id": "flush_big",
+   "poc": 3,
+   "kind": "audio",
+   "model": "sonilo-v1-1-text-to-sound-effects",
+   "inference_id": "4afb26ec-2a19-493f-932c-bee3e8105850",
+   "cost_creative_units": 0.1485,
+   "local_source": "assets/source/audio/",
+   "runtime": "assets/audio/flush_big.ogg",
+   "prompt_summary": "emergency toilet flush: clunk, roaring swirl, comic glug (3 s)"
+  },
+  {
+   "job_id": "drain_gulp",
+   "poc": 3,
+   "kind": "audio",
+   "model": "sonilo-v1-1-text-to-sound-effects",
+   "inference_id": "145dfb8c-786c-4be0-bd33-8600c4b69f81",
+   "cost_creative_units": 0.1,
+   "local_source": "assets/source/audio/",
+   "runtime": "assets/audio/drain_gulp.ogg",
+   "prompt_summary": "object sucked down the drain: wet SHLOOP + pipe gulp (1 s)"
+  },
+  {
+   "job_id": "clog_clear",
+   "poc": 3,
+   "kind": "audio",
+   "model": "sonilo-v1-1-text-to-sound-effects",
+   "inference_id": "db9bdf9c-e5fd-4238-9ecf-6038726a847d",
+   "cost_creative_units": 0.1,
+   "local_source": "assets/source/audio/",
+   "runtime": "assets/audio/clog_clear.ogg",
+   "prompt_summary": "clog clears: suction POP + relieved gurgle (1.2 s)"
+  },
+  {
+   "job_id": "water_rising",
+   "poc": 3,
+   "kind": "audio",
+   "model": "sonilo-v1-1-text-to-sound-effects",
+   "inference_id": "90d7011c-bd75-487e-a015-9bd599599544",
+   "cost_creative_units": 0.1995,
+   "local_source": "assets/source/audio/",
+   "runtime": "assets/audio/water_rising.ogg",
+   "prompt_summary": "rising water loop: ominous bubbling, plumbing groans (4 s)"
+  },
+  {
+   "job_id": "cascade_1",
+   "poc": 3,
+   "kind": "audio",
+   "model": "sonilo-v1-1-text-to-music",
+   "inference_id": "923a7f46-3830-46f6-9a78-e28c8e70b512",
+   "cost_creative_units": 0.1428,
+   "local_source": "assets/source/audio/",
+   "runtime": "assets/audio/cascade_1.ogg",
+   "prompt_summary": "merge combo sting: glockenspiel arpeggio + slide whistle"
+  },
+  {
+   "job_id": "cascade_2",
+   "poc": 3,
+   "kind": "audio",
+   "model": "sonilo-v1-1-text-to-music",
+   "inference_id": "697c5585-cd59-416f-a05c-2e613a0d0df7",
+   "cost_creative_units": 0.1428,
+   "local_source": "assets/source/audio/",
+   "runtime": "assets/audio/cascade_2.ogg",
+   "prompt_summary": "big chain sting: bells, xylophone, brass stab"
+  },
+  {
+   "job_id": "cascade_3",
+   "poc": 3,
+   "kind": "audio",
+   "model": "sonilo-v1-1-text-to-music",
+   "inference_id": "d5298f00-0475-4184-9814-74c56a83d720",
+   "cost_creative_units": 0.2079,
+   "local_source": "assets/source/audio/",
+   "runtime": "assets/audio/cascade_3.ogg",
+   "prompt_summary": "mega combo fanfare: orchestral run, choir ta-daaa"
+  },
+  {
+   "job_id": "royal_fanfare",
+   "poc": 3,
+   "kind": "audio",
+   "model": "sonilo-v1-1-text-to-music",
+   "inference_id": "c22e792d-9a6e-48af-a052-b4cf848dcca2",
+   "cost_creative_units": 0.2793,
+   "local_source": "assets/source/audio/",
+   "runtime": "assets/audio/royal_fanfare.ogg",
+   "prompt_summary": "pompous royal victory fanfare (4 s)"
+  },
+  {
+   "job_id": "gameover_sting",
+   "poc": 3,
+   "kind": "audio",
+   "model": "sonilo-v1-1-text-to-music",
+   "inference_id": "b4a115e5-8e86-43d3-b309-f20ef01e6658",
+   "cost_creative_units": 0.1428,
+   "local_source": "assets/source/audio/",
+   "runtime": "assets/audio/gameover_sting.ogg",
+   "prompt_summary": "sad trombone wah-wah-waaah"
   }
  ]
 }

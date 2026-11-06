@@ -61,7 +61,7 @@ func _setup(t: int) -> void:
 		center_of_mass_mode = RigidBody2D.CENTER_OF_MASS_MODE_CUSTOM
 		center_of_mass = Vector2(def.com[0], def.com[1]) * sc
 	var pm := PhysicsMaterial.new()
-	pm.friction = 0.45
+	pm.friction = float(def.get("friction", 0.45))
 	pm.bounce = float(def.get("bounce", 0.12))
 	physics_material_override = pm
 	continuous_cd = RigidBody2D.CCD_MODE_CAST_SHAPE

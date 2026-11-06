@@ -6,7 +6,7 @@
 * object sheets (flat magenta, one item per grid cell, positional) -> assets/processed/levels/<level>/tier_1..9.png
   bathroom: objects_sheet_raw.png (3x2: duck, paper, shampoo, plunger, boot, golden toilet) + bathroom_extra_raw.png
             (3x1: scale, washing machine, bathtub); tier order = duck, paper, shampoo, plunger, boot, scale, washer, tub, golden toilet
-  kitchen / palace: <level>_sheet_raw.png (3x3, tiers 1..9 left-to-right, top-to-bottom)
+  kitchen / palace / dorm / whitehouse / royal: <level>_sheet_raw.png (3x3, tiers 1..9 left-to-right, top-to-bottom)
 Afterwards run fit_shapes.py for the collision shapes of the generated objects."""
 import os
 
@@ -22,7 +22,8 @@ OUT = os.path.join(G.ROOT, "assets", "processed")
 MAX_EDGE = 360
 
 BACKGROUNDS = {"bathroom": "bowl_background_raw.png", "kitchen": "bowl_background_kitchen_raw.png",
-               "palace": "bowl_background_palace_raw.png"}
+               "palace": "bowl_background_palace_raw.png", "dorm": "bowl_background_dorm_raw.png",
+               "whitehouse": "bowl_background_whitehouse_raw.png", "royal": "bowl_background_royal_raw.png"}
 
 
 def grid_cells(path, cols, rows):
@@ -64,11 +65,60 @@ def save(img, level, tier):
     print(level, tier, img.size)
 
 
+CARVE = {"royal"}      # backgrounds whose painted bowl walls bulge into the physics interior (see carve())
+
+
+def carve(img):
+    """Make the painted bowl interior match the collision exactly: pixels inside the collision interior (above the throat)
+    that are not porcelain are repainted with the nearest porcelain colour of the same row, and the wall outline is
+    redrawn on the collision line where anything was repainted."""
+    from PIL import ImageDraw
+    b = G.load()
+    inner = G.inner_left(b)
+    poly = inner + list(reversed(G.mirror(inner, b["center_x"])))
+    m = Image.new("L", img.size, 0)
+    ImageDraw.Draw(m).polygon(poly, fill=255)
+    inside = np.asarray(m) > 0
+    a = np.asarray(img).astype(np.int16)
+    mx, mn = a.max(axis=2), a.min(axis=2)
+    porcelain = (mn > 150) & (mx - mn < 70) & (a[..., 2] >= a[..., 0] - 4)   # light, bluish-white (gold is warm)
+    fix = inside & ~porcelain
+    fix[: int(b["rim_y"]) + 60] = False                     # the rim lip stays as painted
+    fix[int(b["throat_y"]) - 14:] = False                   # the drain mouth stays as painted
+    out = a.copy()
+    cx = int(b["center_x"])
+    for y in np.nonzero(fix.any(axis=1))[0]:
+        row = porcelain[y]
+        for x in np.nonzero(fix[y])[0]:
+            step = 1 if x < cx else -1                      # walk toward the centre to the first porcelain pixel
+            xx = x
+            while 0 <= xx < img.width and not row[xx] and abs(xx - x) < 200:
+                xx += step
+            if 0 <= xx < img.width and row[xx]:
+                out[y, x] = (a[y, xx] * 0.94).astype(np.int16)
+    res = Image.fromarray(out.clip(0, 255).astype(np.uint8))
+    from PIL import ImageFilter                              # soften the row-by-row fill (only where we painted)
+    soft = res.filter(ImageFilter.GaussianBlur(4))
+    res = Image.composite(soft, res, Image.fromarray((fix * 255).astype(np.uint8)))
+    rows = np.nonzero(fix.any(axis=1))[0]
+    if len(rows):
+        y0, y1 = rows.min() - 10, rows.max() + 10
+        d = ImageDraw.Draw(res)
+        for side in (inner, G.mirror(inner, b["center_x"])):
+            seg = [p for p in side if y0 <= p[1] <= y1]
+            if len(seg) > 1:
+                d.line(seg, fill=(28, 26, 40), width=7, joint="curve")
+    print("carved %d px" % int(fix.sum()))
+    return res
+
+
 def backgrounds():
     for level, raw in BACKGROUNDS.items():
         p = os.path.join(SRC, raw)
         if os.path.exists(p):
             img = Image.open(p).convert("RGB").resize((1080, 1920), Image.LANCZOS)
+            if level in CARVE:
+                img = carve(img)
             img.save(os.path.join(OUT, "bg_%s.jpg" % level), quality=88)
 
 
@@ -77,7 +127,7 @@ def objects():
     extra = grid_cells("bathroom_extra_raw.png", 3, 1)
     for t, img in enumerate(first[:5] + extra + [first[5]]):
         save(img, "bathroom", t + 1)
-    for level in ("kitchen", "palace"):
+    for level in ("kitchen", "palace", "dorm", "whitehouse", "royal"):
         for t, img in enumerate(grid_cells("%s_sheet_raw.png" % level, 3, 3)):
             save(img, level, t + 1)
 

@@ -4,7 +4,7 @@
     python3 tools/i18n/extract_strings.py [--list]
 
 Sources (exact, no guessing):
-* data/levels.json: every level `name` and every tier `name`;
+* data/levels.json (played levels): every level `name`, `tagline`, `royal_message` and every tier `name`;
 * game/**/*.gd: every string literal passed straight to Loc.t("...").
 Rule for code: show text only through Loc.t("..."), translate a FORMAT and fill it afterwards (Loc.t("CHAIN x%d") % n),
 never glue translated pieces together.
@@ -28,6 +28,9 @@ def collect():
     levels = json.loads((ROOT / "data" / "levels.json").read_text(encoding="utf-8"))["levels"]
     for lv in levels:
         found.add(lv["name"])
+        for k in ("tagline", "royal_message"):
+            if lv.get(k):
+                found.add(lv[k])
         for t in lv["tiers"]:
             found.add(t["name"])
     for p in sorted((ROOT / "game").rglob("*.gd")):

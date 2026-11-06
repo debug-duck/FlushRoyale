@@ -3,12 +3,18 @@ extends Node
 ##   godot --headless --path . --fixed-fps 60 tests/bot_probe.tscn -- --games=3 --cap=1500 [--random]
 ## The bot aims: it tries a fan of slingshot drags, simulates each flight (same integration as the preview) and picks
 ## the one that lands closest to an object of the same tier (else the bowl centre). --random throws blindly instead.
-## Flush policy: spend a charge when the water is high, the drain is plugged, or charges are full and the bottom is busy.
+## Play styles (--policy=...):
+##   conservative  aims, throws every ~1.6 s, emergency-flushes when the bowl is 60 % full
+##   aggressive    aims, throws every ~1.0 s, flushes only from 85 %
+##   flusher       flushes whenever the water is rising and a charge is stored
+##   holdout       flushes only when the water is already over the line (overflow countdown running)
+## The bot fires the ROYAL FLUSH as soon as it is armed.
 var game: Game
 var cap := 1500.0
 var random_aim := false
 var throw_every := 1.6
-var policy := "smart"   # smart | danger (only when the water is near the line)
+var policy := "conservative"
+var start_level := 0
 
 func _ready() -> void:
 	var games := 3
@@ -19,6 +25,8 @@ func _ready() -> void:
 			cap = float(a.trim_prefix("--cap="))
 		elif a == "--random":
 			random_aim = true
+		elif a.begins_with("--start="):
+			start_level = int(a.trim_prefix("--start="))
 		elif a.begins_with("--policy="):
 			policy = a.trim_prefix("--policy=")
 	for g in games:
@@ -40,7 +48,7 @@ func _new(level: int, score: int, seed_i: int) -> void:
 
 func play(seed_i: int) -> void:
 	seed(seed_i * 7919 + 1)
-	await _new(0, 0, seed_i)
+	await _new(start_level, 0, seed_i)
 	var t := 0.0
 	var level_t := 0.0
 	var next_throw := 1.0
@@ -48,6 +56,9 @@ func play(seed_i: int) -> void:
 	var total_ms := 0.0
 	var frames := 0
 	var log := []
+	var danger_t := 0.0
+	var max_fill := 0.0
+	throw_every = 1.0 if policy == "aggressive" else 1.6
 	while t < cap:
 		var L := game.launcher
 		var w := game.water
@@ -62,12 +73,23 @@ func play(seed_i: int) -> void:
 			for o in game.objects:
 				if o.global_position.y > 1350 and not o.held:
 					low += 1
-			var want := w.fill_frac() > 0.7
-			if policy == "smart":   # flush the small clutter when the water rises; never flush into a big plug
-				var big_plug: bool = w.plug != null and w.plug.tier >= 5
-				want = not big_plug and (w.fill_frac() > 0.45 or game.charges >= int(Cfg.c.meter.max_charges))
-			if game.charges > 0 and want:
+			var want := false
+			match policy:
+				"conservative":
+					want = w.fill_frac() > 0.6
+				"aggressive":
+					want = w.fill_frac() > 0.85
+				"flusher":
+					want = w.rise_rate() > 0.0
+				"holdout":
+					want = game.over_t > 0.0
+			if game.charges > 0 and want and w.can_flush():
 				game.request_flush()
+			if w.rise_rate() > 0.0:
+				danger_t += 1.0 / 60.0
+			max_fill = maxf(max_fill, w.fill_frac())
+		elif game.state == Game.State.ROYAL_READY and game.royal_armed:
+			game.request_flush()
 		var t0 := Time.get_ticks_usec()
 		await get_tree().physics_frame
 		var ms := (Time.get_ticks_usec() - t0) / 1000.0
@@ -77,17 +99,26 @@ func play(seed_i: int) -> void:
 		t += 1.0 / 60.0
 		level_t += 1.0 / 60.0
 		if game.state == Game.State.LEVEL_DONE or game.state == Game.State.VICTORY or game.state == Game.State.GAME_OVER:
-			log.append("%s %s %.0fs reached %s (merges %d, triples %d, best chain %d, flushes %d, squeezed %d, score %d)" % [
+			log.append("%s %s %.0fs top=%d (merges %d, triples %d, chain %d, flushes %d, lost %s, clears %d, rising %.0f%%, maxfill %.2f, score %d)" % [
 				Cfg.level_id(), {Game.State.LEVEL_DONE: "ROYAL", Game.State.VICTORY: "ROYAL+WIN", Game.State.GAME_OVER: "FLOODED"}[game.state],
-				level_t, game.stats.reached, game.stats.merges, game.stats.triples, game.stats.best_chain, game.stats.flushes, game.stats.squeezed, game.score])
+				level_t, _top(), game.stats.merges, game.stats.triples, game.stats.best_chain, game.stats.flushes, game.stats.lost,
+				game.stats.clears, 100.0 * danger_t / maxf(level_t, 1.0), max_fill, game.score])
+			danger_t = 0.0
+			max_fill = 0.0
 			if game.state != Game.State.LEVEL_DONE:
 				break
 			await _new(Cfg.level + 1, game.score, seed_i)
 			level_t = 0.0
 			next_throw = 1.0
 	if t >= cap:
-		log.append("%s CAP at %.0fs reached %s (max tier %d, merges %d, triples %d, flushes %d, flushed %s, score %d)" % [Cfg.level_id(), level_t, game.stats.reached, _max_tier(), game.stats.merges, game.stats.triples, game.stats.flushes, game.stats.flushed, game.score])
+		log.append("%s CAP at %.0fs top=%d (merges %d, flushes %d, lost %s, rising %.0f%%, maxfill %.2f, score %d)" % [Cfg.level_id(), level_t, _top(), game.stats.merges, game.stats.flushes, game.stats.lost, 100.0 * danger_t / maxf(level_t, 1.0), max_fill, game.score])
 	print("game %d: %s | frame avg %.2f ms worst %.1f ms" % [seed_i, " || ".join(log), total_ms / frames, worst_ms])
+
+func _top() -> int:
+	var m := 0
+	for k in game.stats.reached:
+		m = maxi(m, int(k))
+	return m
 
 func _max_tier() -> int:
 	var m := 0
@@ -105,9 +136,14 @@ func _aim() -> Vector2:
 	if not held:
 		return _random_drag()
 	var targets: Array[Vector2] = []
+	var clog: Array[Vector2] = []      # precision throw: while the water rises, a match sitting in the drain comes first
 	for o in game.objects:
 		if o != held and o.tier == held.tier and not o.merging and not o.passing:
 			targets.append(o.global_position)
+			if o.global_position.y > Cfg.geo.throat_y - 260.0:
+				clog.append(o.global_position)
+	if game.water.rise_rate() > 0.0 and not clog.is_empty():
+		targets = clog
 	if targets.is_empty():
 		targets.append(Vector2(Cfg.geo.cx + randf_range(-200, 200), game.water.level_y + 60))
 	var g := Vector2(0, ProjectSettings.get_setting("physics/2d/default_gravity"))

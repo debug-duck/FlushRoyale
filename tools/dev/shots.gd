@@ -9,6 +9,7 @@ func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://tools/dev/out"))
 	for lv in Cfg.level_count():
 		await _level_pile(lv)
+	await _danger()
 	await _royal()
 	get_tree().quit()
 
@@ -43,6 +44,21 @@ func _level_pile(level: int) -> void:
 	await _shot("level%d_pile" % (level + 1))
 	L.release()
 
+## Danger: a clogged drain, the water rising toward the line, the red edge glow and rising arrows.
+func _danger() -> void:
+	await _new_game(1)
+	for t in [6, 4, 2, 2, 5]:
+		game.make_object(t, Vector2(500 + randf() * 80, 1000))
+		await _frames(20)
+	await _frames(200)
+	game.water.volume = Cfg.geo.volume_at_level(930.0)
+	await _frames(90)
+	await _shot("danger")
+	game.add_meter(1.0)
+	game.request_flush()
+	await _frames(60)
+	await _shot("emergency_flush")
+
 func _royal() -> void:
 	await _new_game(0)
 	# triple merge: three shampoos dropped together
@@ -64,7 +80,14 @@ func _royal() -> void:
 	var b := game.make_object(8, Vector2(700, 300))
 	b.linear_velocity = Vector2(-500, 300)
 	await _frames(60)
-	await _shot("royal_start")
+	await _shot("royal_unlocked")
+	for i in 300:
+		await get_tree().physics_frame
+		if game.royal_armed:
+			break
+	await _frames(30)
+	await _shot("royal_ready")
+	game.request_flush()
 	for i in 120:
 		await get_tree().physics_frame
 		if game._royal_started:

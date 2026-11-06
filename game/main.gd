@@ -1,12 +1,14 @@
 class_name Game
 extends Node2D
-## The whole loop: AIM -> THROW -> MERGE -> GROW -> FLUSH -> SCORE / CLOG -> RECOVER -> ... -> ROYAL FLUSH -> next level.
+## The whole loop: AIM -> THROW -> MERGE -> GROW -> (water rises while the drain is clogged) -> EMERGENCY FLUSH or keep
+## merging -> ... -> last tier -> ROYAL FLUSH -> next level.
 ## Builds the scene in code (camera, background, bowl, water, objects, launcher, fx, hud) and owns the rules:
-## spawning, merging (pairs, TRIPLE MERGE, chains), the earned flush (meter -> charges), flush scoring, discovery of a
-## level's objects, the ROYAL FLUSH that ends a level, overflow game over and level progression.
+## spawning, merging (pairs, TRIPLE MERGE, chains), the earned emergency flush (meter -> charges, no points: objects
+## that go down are LOST), discovery of a level's objects, the player-triggered ROYAL FLUSH that ends a level,
+## overflow game over and level progression.
 ## Physics lives in FlushObject / Water / Bowl. All numbers live in data/.
 
-enum State { PLAY, ROYAL, LEVEL_DONE, GAME_OVER, VICTORY }
+enum State { PLAY, ROYAL, LEVEL_DONE, GAME_OVER, VICTORY, ROYAL_READY }
 
 const SAVE_PATH := "user://best.json"
 ## Survives reload_current_scene: {level, score} of the run in progress (empty = fresh run from level 1).
@@ -34,7 +36,8 @@ var chain_mult := 1.0
 var discovered := {}                # tier -> true (this level, this run)
 var persist := true                 # tests turn this off (no save file)
 var reload_enabled := true          # tests turn this off (level changes only set `carry`)
-var stats := {"merges": 0, "triples": 0, "flushed": {}, "squeezed": 0, "launches": 0, "flushes": 0, "best_chain": 0, "royal": 0, "reached": {}}
+var stats := {"merges": 0, "triples": 0, "flushed": {}, "lost": {}, "squeezed": 0, "launches": 0, "flushes": 0, "best_chain": 0, "royal": 0, "reached": {}, "clears": 0}
+var royal_armed := false            # ROYAL_READY: the cascade has settled, the button now fires the royal flush
 var rng := RandomNumberGenerator.new()
 var royal_t := -1.0
 var _royal_queue: Array[FlushObject] = []
@@ -88,6 +91,7 @@ func _ready() -> void:
 	hud.flush_pressed.connect(request_flush)
 	hud.restart_pressed.connect(_on_panel_button)
 	water.squeezed.connect(_on_squeezed)
+	water.cleared.connect(_on_cleared)
 	water.splashed.connect(func(p, power):
 		fx.splash(p, power)
 		Sfx.play("splash", randf_range(0.85, 1.15), linear_to_db(clampf(power / 500.0, 0.25, 1.0))))
@@ -101,7 +105,7 @@ func _ready() -> void:
 		discovered[t] = true
 	next_tier = roll_tier()
 	spawn_held()
-	hud.banner(Loc.t("LEVEL %d: %s") % [Cfg.level + 1, Loc.t(Cfg.level_def().name)], 2.2)
+	hud.banner(Loc.t("LEVEL %d: %s") % [Cfg.level + 1, Loc.t(Cfg.level_def().name)], 2.6, false, Loc.t(Cfg.level_text("tagline")))
 
 # ------------------------------------------------------------------ spawning
 
@@ -138,7 +142,7 @@ func on_launched(_o: FlushObject) -> void:
 
 ## Called from contact signals of BOTH bodies. A pair waits `triple_window` s; a third match touching either joins it.
 func try_merge(a: FlushObject, b: FlushObject) -> void:
-	if a == b or a.tier != b.tier or a.tier >= Cfg.max_tier() or state != State.PLAY:
+	if a == b or a.tier != b.tier or a.tier >= Cfg.max_tier() or not (state == State.PLAY or state == State.ROYAL_READY):
 		return
 	for o in [a, b]:
 		if o.held or o.passing or not objects.has(o):
@@ -230,7 +234,7 @@ func _merge(group: Array) -> void:
 		made.append(n)
 	_score_merge(tier, pos, made[0].radius(), triple)
 	if tier >= Cfg.max_tier():
-		start_royal_flush()
+		unlock_royal_flush()
 
 func _score_merge(tier: int, pos: Vector2, r: float, triple: bool) -> void:
 	var now := _sim_t
@@ -251,6 +255,8 @@ func _score_merge(tier: int, pos: Vector2, r: float, triple: bool) -> void:
 	add_meter(gain)
 	fx.pop(pos, r, Color(Cfg.tier(tier).color))
 	fx.text(pos + Vector2(0, -r - 20), Loc.t("+%d") % pts, Color(1, 1, 0.8), 46)
+	if triple or chain >= 2:
+		Sfx.cascade(chain, triple)
 	if triple:
 		fx.text(pos + Vector2(0, -r - 80), Loc.t("TRIPLE MERGE!"), Color(0.5, 1.0, 0.9), 62)
 		Sfx.play("pop", 0.8)
@@ -288,22 +294,48 @@ func remove_object(o: FlushObject) -> void:
 # ------------------------------------------------------------------ flush / royal flush / scoring
 
 func can_flush() -> bool:
+	if state == State.ROYAL_READY:
+		return royal_armed
 	return state == State.PLAY and charges > 0 and water.can_flush()
 
-## Spends one earned charge. Returns true when a flush started.
+## FLUSH button. PLAY: an EMERGENCY flush that spends a charge (no points; what goes down is lost).
+## ROYAL_READY (armed): the royal flush. Returns true when something started.
 func request_flush() -> bool:
+	if state == State.ROYAL_READY:
+		if royal_armed:
+			start_royal_flush()
+			return true
+		return false
 	if not can_flush():
 		if state == State.PLAY and charges == 0:
 			hud.flash_flush(true)
 		return false
 	charges -= 1
 	stats.flushes += 1
+	Sfx.play("flush_big")
 	return water.start_flush()
 
-func start_royal_flush() -> void:
+## The last tier exists: the level is won. Overflow and rising water stop; the button becomes ROYAL FLUSH once the
+## running cascade has finished (see _physics_process).
+func unlock_royal_flush() -> void:
 	if state != State.PLAY:
 		return
+	state = State.ROYAL_READY
+	royal_armed = false
+	over_t = 0.0
+	water.frozen = true
+	launcher.enabled = false
+	if launcher.held:
+		remove_object(launcher.held)
+		launcher.held = null
+	Sfx.stop_danger()
+
+func start_royal_flush() -> void:
+	if state != State.ROYAL_READY and state != State.PLAY:
+		return
 	state = State.ROYAL
+	water.frozen = true
+	water.stop_flush()
 	stats.royal += 1
 	royal_t = 0.0
 	launcher.enabled = false
@@ -316,8 +348,9 @@ func start_royal_flush() -> void:
 				o.merging = false
 	_pending.clear()
 	Engine.time_scale = float(Cfg.c.royal.slowmo)
-	hud.banner(Loc.t("ROYAL FLUSH!"), 3.5, true)
-	Sfx.play("flush", 0.7)
+	hud.banner(Loc.t("ROYAL FLUSH!"), 3.5, true, Loc.t(Cfg.level_text("royal_message")))
+	Sfx.stop_danger()
+	Sfx.play("royal_fanfare")
 
 func _update_royal(dt: float) -> void:
 	var real_dt := dt / maxf(Engine.time_scale, 0.01)
@@ -328,6 +361,7 @@ func _update_royal(dt: float) -> void:
 			_royal_started = true
 			Engine.time_scale = 1.0
 			water.start_flush(float(r.duration))
+			Sfx.play("flush_big", 0.8)
 			_royal_queue.assign(objects.filter(func(o): return not o.held))
 			var drain := Vector2(geo.cx, geo.throat_y)
 			_royal_queue.sort_custom(func(a, b): return a.global_position.distance_to(drain) < b.global_position.distance_to(drain))
@@ -345,18 +379,28 @@ func _update_royal(dt: float) -> void:
 	if objects.is_empty() and _royal_queue.is_empty():
 		_level_done()
 
+## An object reached the end of the outlet. Royal flush: scored x multiplier. Emergency flush: LOST (no points).
 func _flushed(o: FlushObject) -> void:
-	var mult: int = int(Cfg.c.royal.multiplier) if state == State.ROYAL else 1
-	var pts := Cfg.flush_points(o.tier) * mult
-	score += pts
 	stats.flushed[o.tier] = stats.flushed.get(o.tier, 0) + 1
 	var name_s := Loc.t(o.def.name).to_upper()
-	var label := Loc.t("+%d") % pts if o.tier < 4 else Loc.t("%s! +%d") % [name_s, pts]
-	if mult > 1:
-		label = Loc.t("%s x%d +%d") % [name_s, mult, pts]
-	fx.text(Vector2(geo.cx + randf_range(-60, 60), geo.throat_y - 60 - randf_range(0, 80)), label, Color(1, 0.85, 0.3) if mult > 1 else Color(0.6, 1.0, 0.7), 46 + o.tier * 5)
-	Sfx.play("gurgle", 1.2 - o.tier * 0.05)
+	var at := Vector2(geo.cx + randf_range(-60, 60), geo.throat_y - 60 - randf_range(0, 80))
+	if state == State.ROYAL:
+		var mult: int = int(Cfg.c.royal.multiplier)
+		var pts := Cfg.flush_points(o.tier) * mult
+		score += pts
+		fx.text(at, Loc.t("%s x%d +%d") % [name_s, mult, pts], Color(1, 0.85, 0.3), 46 + o.tier * 5)
+	else:
+		stats.lost[o.tier] = stats.lost.get(o.tier, 0) + 1
+		if o.tier >= 3:
+			fx.text(at, Loc.t("LOST: %s") % name_s, Color(1.0, 0.55, 0.45), 40 + o.tier * 4)
+	Sfx.play("drain_gulp", clampf(1.25 - o.tier * 0.06, 0.7, 1.3), -4.0)
 	remove_object(o)
+
+func _on_cleared() -> void:
+	stats.clears += 1
+	if state == State.PLAY:
+		Sfx.play("clog_clear")
+		fx.text(Vector2(geo.cx, geo.throat_y - 150), Loc.t("UNCLOGGED!"), Color(0.6, 1.0, 0.8), 44)
 
 func _on_squeezed(o: FlushObject) -> void:
 	stats.squeezed += 1
@@ -379,8 +423,16 @@ func _physics_process(dt: float) -> void:
 	if state == State.ROYAL:
 		_update_royal(dt)
 		return
+	if state == State.ROYAL_READY:
+		if not royal_armed and _pending.is_empty() and _sim_t - _last_merge_t >= float(Cfg.c.royal.settle):
+			royal_armed = true     # the cascade is over: hand the finale to the player
+			hud.banner(Loc.t("ROYAL FLUSH UNLOCKED!"), 2.5, true, Loc.t("TAP THE BUTTON!"))
+			hud.flash_flush()
+			Sfx.cascade(6)
+		return
 	if state != State.PLAY:
 		return
+	Sfx.set_danger(water.fill_frac(), water.rise_rate() > 0.0)
 	if water.level_y <= water.overflow_y:
 		over_t += dt
 		_alarm_t -= dt
@@ -398,7 +450,7 @@ func _level_done() -> void:
 	state = State.LEVEL_DONE if Cfg.level < Cfg.level_count() - 1 else State.VICTORY
 	_record_best()
 	hud.show_panel(state)
-	Sfx.play("gurgle", 0.6)
+	Sfx.stop_danger()
 
 func end_game() -> void:
 	if state == State.GAME_OVER:
@@ -408,7 +460,8 @@ func end_game() -> void:
 	launcher.enabled = false
 	_record_best()
 	hud.show_panel(state)
-	Sfx.play("gameover")
+	Sfx.stop_danger()
+	Sfx.play("gameover_sting" if Sfx.streams.has("gameover_sting") else "gameover")
 
 func _on_panel_button() -> void:
 	match state:

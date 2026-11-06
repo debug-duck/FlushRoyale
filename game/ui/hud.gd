@@ -21,6 +21,7 @@ var _banner := ""
 var _banner_t := 0.0
 var _banner_len := 0.0
 var _banner_royal := false
+var _banner_sub := ""
 var _flash_t := 9.0
 var _flash_bad := false
 var _reveal := {}                 # tier -> seconds since revealed
@@ -70,8 +71,9 @@ static func _place(c: Control, anchor: Vector2, r: Rect2) -> void:
 	c.offset_right = r.end.x
 	c.offset_bottom = r.end.y
 
-func banner(text: String, seconds: float, royal := false) -> void:
+func banner(text: String, seconds: float, royal := false, sub := "") -> void:
 	_banner = text
+	_banner_sub = sub
 	_banner_t = 0.0
 	_banner_len = seconds
 	_banner_royal = royal
@@ -135,25 +137,30 @@ func _draw_hud() -> void:
 	_icon(game.next_tier, box.position + Vector2(95, 118), 112.0, true)
 	_draw_strip(vs)
 	_draw_gauge(vs, water)
-	# warnings
+	# danger: a red glow creeping in from the screen edges as the water climbs (pulses faster while rising)
 	if game.state == Game.State.PLAY:
+		var f: float = water.fill_frac()
+		if f > 0.55:
+			var k := clampf((f - 0.55) / 0.45, 0.0, 1.0)
+			var speed := 0.006 + (0.01 if water.rise_rate() > 0.0 else 0.0)
+			var pulse := 0.6 + 0.4 * sin(Time.get_ticks_msec() * speed)
+			_vignette(vs, Color(0.85, 0.05, 0.05, (0.10 + 0.32 * k) * pulse), 60.0 + 110.0 * k)
 		if game.over_t > 0.0:
 			var left: float = float(Cfg.c.overflow.grace_time) - game.over_t
 			var flash := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.02)
 			_text(Vector2(cx, vs.y * 0.37), Loc.t("OVERFLOWING! %.1f") % maxf(left, 0.0), 80, Color(1, 0.3 + 0.4 * flash, 0.2), true)
-		elif water.blockage > 0.75:
-			_text(Vector2(cx, vs.y * 0.37), Loc.t("CLOGGED!"), 64, Color(1, 0.75, 0.3), true)
 	# banner (not over an end panel)
 	if _banner_t < _banner_len and _panel_t < 0.0:
 		var a := clampf(minf(_banner_t * 4.0, (_banner_len - _banner_t) * 2.0), 0.0, 1.0)
 		var pop := 1.0 + 0.25 * exp(-_banner_t * 6.0)
 		if _banner_royal:
-			var size := int(150 * pop)
 			var wob := sin(_banner_t * 9.0) * 6.0
-			_text(Vector2(cx, vs.y * 0.33 + wob), _banner, size, Color(GOLD, a), true, 24)
-			_text(Vector2(cx, vs.y * 0.33 + 90), Loc.t("EVERYTHING MUST GO!"), 54, Color(1, 1, 1, a), true)
+			_text_fit(Vector2(cx, vs.y * 0.33 + wob), _banner, int(150 * pop), vs.x - 60.0, Color(GOLD, a), 24)
+			_text_lines(Vector2(cx, vs.y * 0.33 + 90), _banner_sub, 54, vs.x - 80.0, Color(1, 1, 1, a))
 		else:
-			_text(Vector2(cx, vs.y * 0.33), _banner, int(70 * pop), Color(1, 1, 1, a), true, 18)
+			_text_fit(Vector2(cx, vs.y * 0.33), _banner, int(70 * pop), vs.x - 60.0, Color(1, 1, 1, a), 18)
+			if _banner_sub != "":
+				_text_lines(Vector2(cx, vs.y * 0.33 + 70), _banner_sub, 46, vs.x - 80.0, Color(GOLD, a))
 	# end panels
 	if _panel_t >= 0.0:
 		var a := clampf(_panel_t * 2.0, 0.0, 0.72)
@@ -161,12 +168,13 @@ func _draw_hud() -> void:
 		var y := vs.y * 0.5
 		match _panel_state:
 			Game.State.LEVEL_DONE:
-				_text(Vector2(cx, y - 320), Loc.t(Cfg.level_def().name), 64, GOLD, true)
-				_text(Vector2(cx, y - 150), Loc.t("FLUSHED!"), 140, Color(0.6, 0.9, 1.0), true)
+				_text(Vector2(cx, y - 380), Loc.t(Cfg.level_def().name), 56, GOLD, true)
+				_text_lines(Vector2(cx, y - 270), Loc.t(Cfg.level_text("royal_message")), 84, vs.x - 80.0, Color(0.6, 0.9, 1.0))
 				_text(Vector2(cx, y - 40), Loc.t("LEVEL SCORE %d") % (game.score - game.level_start_score), 60, Color.WHITE, true)
 				_text(Vector2(cx, y + 50), Loc.t("TOTAL %d") % game.score, 50, Color(1, 1, 1, 0.85), true)
 				_text(Vector2(cx, y + 120), Loc.t("NEXT: %s") % Loc.t(Cfg.levels[Cfg.level + 1].name), 44, GOLD, true)
 			Game.State.VICTORY:
+				_text_lines(Vector2(cx, y - 420), Loc.t(Cfg.level_text("royal_message")), 64, vs.x - 80.0, Color(0.6, 0.9, 1.0))
 				_text(Vector2(cx, y - 240), Loc.t("ALL HAIL"), 80, Color.WHITE, true)
 				_text(Vector2(cx, y - 120), Loc.t("THE FLUSH KING!"), 110, GOLD, true)
 				_text(Vector2(cx, y - 10), Loc.t("SCORE %d") % game.score, 80, Color.WHITE, true)
@@ -175,6 +183,42 @@ func _draw_hud() -> void:
 				_text(Vector2(cx, y - 220), Loc.t("FLOODED!"), 140, Color(0.6, 0.85, 1.0), true)
 				_text(Vector2(cx, y - 80), Loc.t("SCORE %d") % game.score, 80, Color.WHITE, true)
 				_text(Vector2(cx, y + 10), Loc.t("BEST %d") % game.best, 54, GOLD, true)
+
+## One line, shrunk to fit max_w.
+func _text_fit(p: Vector2, s: String, size: int, max_w: float, col: Color, outline := 16) -> void:
+	var w := font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	if w > max_w:
+		size = int(size * max_w / w)
+	_text(p, s, size, col, true, outline)
+
+## Centered text broken into lines that fit max_w (word wrap), first line at p.
+func _text_lines(p: Vector2, s: String, size: int, max_w: float, col: Color) -> void:
+	if s == "":
+		return
+	var lines: Array[String] = []
+	var cur := ""
+	for word in s.split(" "):
+		var test := word if cur == "" else cur + " " + word
+		if cur != "" and font.get_string_size(test, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > max_w:
+			lines.append(cur)
+			cur = word
+		else:
+			cur = test
+	lines.append(cur)
+	for i in lines.size():
+		_text_fit(p + Vector2(0, i * size * 1.1), lines[i], size, max_w, col)
+
+func _vignette(vs: Vector2, col: Color, width: float) -> void:
+	var steps := 6
+	for i in steps:
+		var a := col.a * (1.0 - float(i) / steps)
+		var c := Color(col, a)
+		var o := width * float(i) / steps
+		var t := width / steps
+		root.draw_rect(Rect2(0, o, vs.x, t), c)
+		root.draw_rect(Rect2(0, vs.y - o - t, vs.x, t), c)
+		root.draw_rect(Rect2(o, 0, t, vs.y), c)
+		root.draw_rect(Rect2(vs.x - o - t, 0, t, vs.y), c)
 
 ## The level's objects in tier order. Unknown = dark silhouette + "?"; the last one is the royal goal (gold frame).
 func _draw_strip(vs: Vector2) -> void:
@@ -216,6 +260,14 @@ func _draw_gauge(vs: Vector2, water: Water) -> void:
 	var wc := Color(0.25, 0.6, 1.0).lerp(Color(1.0, 0.25, 0.2), clampf((f - 0.55) / 0.45, 0.0, 1.0))
 	root.draw_rect(Rect2(g.position.x, g.end.y - fh, g.size.x, fh), wc)
 	root.draw_line(Vector2(g.position.x - 14, g.position.y), Vector2(g.end.x + 14, g.position.y), Color(1, 0.2, 0.15), 6.0)
+	# rising arrows next to the gauge: more arrows = faster rise
+	var rise := water.rise_rate()
+	if rise > 0.0:
+		var n := 1 + int(clampf((rise - float(Cfg.c.water.rise_min)) / maxf(float(Cfg.c.water.rise_max) - float(Cfg.c.water.rise_min), 1.0), 0.0, 1.0) * 2.0 + 0.5)
+		var bob := fmod(Time.get_ticks_msec() * 0.001 * 2.0, 1.0) * 14.0
+		for i in n:
+			var tip := Vector2(g.end.x + 34, g.end.y - fh - 10 - i * 26 - bob)
+			root.draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-14, 18), tip + Vector2(14, 18)]), Color(1, 0.3, 0.2, 0.9))
 	_text(Vector2(g.position.x + 35, g.end.y + 46), Loc.t("WATER"), 30, Color.WHITE, true)
 
 ## FLUSH button: charge pips on top, the meter as a ring, grey when no charge is stored.
@@ -231,10 +283,23 @@ func _draw_flush_button() -> void:
 	flush_button.draw_circle(c + Vector2(0, 10), r, Color(INK, 0.45))
 	flush_button.draw_circle(c, r + 8 + pulse, Color(0.8, 0.1, 0.1) if _flash_bad and _flash_t < 0.6 else INK)
 	flush_button.draw_circle(c, r, Color(0.84, 0.88, 0.94))
+	var royal_mode: bool = game.state == Game.State.ROYAL_READY
 	var inner := Color(0.2, 0.62, 1.0) if ready else Color(0.55, 0.6, 0.68)
+	if royal_mode:
+		var glow := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.012)
+		inner = GOLD.lerp(Color(1, 0.95, 0.6), glow) if ready else Color(0.7, 0.6, 0.35)
+		flush_button.draw_circle(c, r + 18 + 10 * glow, Color(GOLD, 0.35 * glow))
 	if water.flushing():
 		inner = Color(0.35, 0.8, 1.0).lerp(Color.WHITE, 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.03))
 	flush_button.draw_circle(c + (Vector2(0, 5) if pressed else Vector2.ZERO), r * 0.72, inner)
+	if royal_mode:
+		for i in 2:
+			var line: String = [Loc.t("ROYAL"), Loc.t("FLUSH!")][i]
+			var lw := font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, 40).x
+			var lp := c + Vector2(-lw * 0.5, -6 + i * 42)
+			flush_button.draw_string_outline(font, lp, line, HORIZONTAL_ALIGNMENT_LEFT, -1, 40, 12, INK)
+			flush_button.draw_string(font, lp, line, HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Color.WHITE)
+		return
 	# meter ring (progress to the next charge)
 	flush_button.draw_arc(c, r - 4, 0, TAU, 48, Color(INK, 0.25), 10.0)
 	if game.meter > 0.0:

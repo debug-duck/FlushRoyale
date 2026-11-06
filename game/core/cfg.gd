@@ -35,6 +35,10 @@ func set_level(i: int) -> void:
 func level_def() -> Dictionary:
 	return levels[level]
 
+## A text field of the current level (name, tagline, royal_message), "" when missing. Translate with Loc.t().
+func level_text(key: String) -> String:
+	return str(levels[level].get(key, ""))
+
 func level_id() -> String:
 	return levels[level].id
 

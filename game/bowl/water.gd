@@ -3,15 +3,17 @@ extends Node2D
 ## The toilet water as a gameplay system (no fluid simulation):
 ## * `volume` = water area in the bowl (px^2). Surface height = level_for_volume(volume + displaced area of submerged
 ##   objects), so sunken junk visibly raises the water.
-## * Flush: the tank adds `inflow_total`; the drain removes `outflow_rate * (1 - blockage)`. Free drain => level drops;
-##   blocked drain => the flush water has nowhere to go and the level RISES. Afterwards the tank refills to rest level
-##   and water above rest drains slowly (only through a free drain).
+## * ARCADE PRESSURE (PoC 3): `obstruction` = smoothed coverage of the drain region. Above `rise_from` the water RISES
+##   (faster the worse the clog) - the water level is the game's timer; below it the water recovers toward rest.
+## * EMERGENCY FLUSH: strong vortex; the drain removes `outflow_rate * (1 - blockage)` down to a floor under rest, so a
+##   cleared drain empties fast. Whatever reaches the outlet is lost (no points). Afterwards the tank refills to rest.
 ## * Blockage = how much of the funnel/outlet cross-section objects cover (physics point queries on horizontal lines).
 ##   A single object covering a line is the PLUG: flush pressure (higher when the water is high) fills its squeeze
 ##   gauge; at 100 % it is squeezed through the outlet (pressure-based passage: every tier is flushable).
 ## * Per object: buoyancy + drag on each submerged sample point, vortex suction + swirl during a flush.
 
 signal squeezed(obj: FlushObject)
+signal cleared                         # the drain went from clogged to clear (sound + small cue)
 signal splashed(pos: Vector2, strength: float)
 
 var geo: BowlGeometry
@@ -30,6 +32,9 @@ var flush_t := -1.0
 var _dur := 3.0                       # vortex length of the current flush (the royal flush is longer)
 var cooldown := 0.0
 var blockage := 0.0
+var obstruction := 0.0                 # smoothed 0..1 obstruction of the drain region: drives the rising water
+var frozen := false                    # royal finale: the water never rises
+var _clogged := false
 var pressure := 0.0
 var plug: FlushObject
 var flushes := 0
@@ -72,6 +77,20 @@ func flush_ready_frac() -> float:
 		return 0.0
 	return 1.0 - clampf(cooldown / maxf(fl.cooldown, 0.01), 0.0, 1.0)
 
+## Rising speed now (px^2/s of water, 0 when not rising).
+func rise_rate() -> float:
+	if frozen or flushing():
+		return 0.0
+	var f: float = cfg.rise_from
+	if obstruction <= f:
+		return 0.0
+	return lerpf(float(cfg.rise_min), float(cfg.rise_max), clampf((obstruction - f) / (1.0 - f), 0.0, 1.0))
+
+## The royal flush may interrupt an emergency flush.
+func stop_flush() -> void:
+	flush_t = -1.0
+	cooldown = 0.0
+
 func start_flush(duration := -1.0) -> bool:
 	if not can_flush():
 		return false
@@ -79,7 +98,7 @@ func start_flush(duration := -1.0) -> bool:
 	flush_t = 0.0
 	flushes += 1
 	bowl.set_gate_open(true)
-	Sfx.play("flush")
+	pass   # sound chosen by the caller (emergency flush vs royal flush)
 	return true
 
 ## Siphon in the outlet: runs a little longer than the vortex so whatever reached the pipe is carried away.
@@ -129,20 +148,25 @@ func _physics_process(dt: float) -> void:
 
 func _update_flow(dt: float) -> void:
 	if flushing():
-		if flush_t < fl.inflow_time:
+		if flush_t < fl.inflow_time and float(fl.inflow_total) > 0.0:
 			volume += float(fl.inflow_total) / float(fl.inflow_time) * dt
 		if flush_t < _dur:
-			volume = maxf(0.0, volume - float(fl.outflow_rate) * (1.0 - blockage) * dt)
+			var floor_v := geo.volume_at_level(rest_y + float(fl.floor_below_rest))
+			if volume > floor_v:
+				volume = maxf(floor_v, volume - float(fl.outflow_rate) * (1.0 - blockage * (1.0 - float(fl.leak_past_plug))) * dt)
 		flush_t += dt
 		if flush_t >= _dur + float(fl.siphon_tail):
 			flush_t = -1.0
 			cooldown = fl.cooldown
-	else:
-		cooldown = maxf(0.0, cooldown - dt)
-		if volume < rest_volume:
-			volume = minf(rest_volume, volume + float(cfg.refill_rate) * dt)
-		elif volume > rest_volume:
-			volume = maxf(rest_volume, volume - float(cfg.passive_drain) * (1.0 - blockage) * dt)
+		return
+	cooldown = maxf(0.0, cooldown - dt)
+	var rise := rise_rate()
+	if rise > 0.0:
+		volume += rise * dt
+	elif volume < rest_volume:
+		volume = minf(rest_volume, volume + float(cfg.refill_rate) * dt)
+	elif volume > rest_volume:
+		volume = maxf(rest_volume, volume - float(cfg.recover_rate) * dt)
 
 func _apply_forces(_dt: float) -> void:
 	var g: float = ProjectSettings.get_setting("physics/2d/default_gravity")
@@ -216,6 +240,7 @@ func _update_blockage() -> void:
 	ys.append(geo.throat_y + 40.0)
 	ys.append(geo.throat_y + 95.0)
 	var worst := 0.0
+	var low_cover: Array[float] = []      # coverage of the lines near the throat (the real bottleneck)
 	var best_plug: FlushObject = null
 	var best_plug_cover := 0.0
 	var line_cover := {}
@@ -232,6 +257,8 @@ func _update_blockage() -> void:
 				var c = hits[0].collider
 				per[c] = per.get(c, 0) + 1
 		worst = maxf(worst, float(covered) / n)
+		if ly >= geo.throat_y - float(dr.obstruct_above):
+			low_cover.append(float(covered) / n)
 		for c in per:
 			var cov := float(per[c]) / n
 			line_cover[c] = maxf(line_cover.get(c, 0.0), cov)
@@ -249,6 +276,19 @@ func _update_blockage() -> void:
 				lowest = c.global_position.y
 	plug = best_plug
 	blockage = maxf(worst, float(dr.plug_seal)) if plug else worst
+	var raw := 0.0
+	for c in low_cover:
+		raw += c / maxf(low_cover.size(), 1.0)
+	if plug:   # a wedged plug: the wider it is compared to the drain, the worse (textbook = partial, university = severe)
+		var k := clampf(plug.extent_x() / (geo.drain_w * float(dr.plug_full_width)), float(dr.plug_min_share), 1.0)
+		raw = maxf(raw, float(dr.plug_seal) * k)
+	var dt := get_physics_process_delta_time()
+	obstruction = lerpf(obstruction, raw, 1.0 - exp(-dt / float(dr.obstruct_tau)))
+	if obstruction > float(dr.clog_above):
+		_clogged = true
+	elif _clogged and obstruction < float(dr.clear_below):
+		_clogged = false
+		cleared.emit()
 
 func _update_squeeze(dt: float) -> void:
 	var s := strength()
@@ -308,6 +348,8 @@ func _update_ripples(dt: float) -> void:
 		for i in n:
 			_cols[i] = clampf(_cols[i] + _colv[i] * h, -34.0, 34.0)
 	var s := strength()
+	if rise_rate() > 0.0 and randf() < 0.25 + obstruction * 0.5:
+		_bubbles.append({"p": Vector2(geo.cx + randf_range(-50, 50), geo.throat_y - randf_range(10, 60)), "r": randf_range(4, 10), "t": 0.0})
 	if s > 0.0:
 		_swirl += dt * s
 		for i in n:  # churning surface during a flush
@@ -341,7 +383,7 @@ func _draw() -> void:
 	for i in range(geo.left.size() - 1, -1, -1):
 		if geo.left[i].y > top + 2.0:
 			poly.append(geo.left[i])
-	var col := Color(0.22, 0.58, 0.96, 0.42).lerp(Color(0.55, 0.42, 0.25, 0.5), clampf(blockage - 0.5, 0.0, 0.5))
+	var col := Color(0.22, 0.58, 0.96, 0.42).lerp(Color(0.45, 0.5, 0.3, 0.5), clampf(obstruction - 0.3, 0.0, 0.6))
 	if Geometry2D.triangulate_polygon(poly).size() > 0:
 		draw_colored_polygon(poly, col)
 	draw_polyline(surf, Color(0.9, 0.97, 1.0, 0.95), 6.0, true)
@@ -372,10 +414,14 @@ func _draw() -> void:
 	while x < geo.x_right(overflow_y) - 6.0:
 		draw_line(Vector2(x, overflow_y), Vector2(minf(x + 26.0, geo.x_right(overflow_y)), overflow_y), oc, 5.0)
 		x += 44.0
-	# clog warning glow at the drain
-	if blockage > 0.75:
-		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.012)
-		draw_circle(Vector2(geo.cx, geo.throat_y), 70.0 + 20.0 * pulse, Color(1, 0.15, 0.1, 0.18 + 0.15 * pulse))
+	# subtle clog cue at the drain: a dark murky glow that grows with the obstruction and pulses while the water rises
+	if obstruction > 0.2:
+		var k := clampf((obstruction - 0.2) / 0.8, 0.0, 1.0)
+		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * (0.004 + 0.01 * k))
+		var r := 55.0 + 45.0 * k + 12.0 * pulse * k
+		draw_circle(Vector2(geo.cx, geo.throat_y - 10.0), r, Color(0.35, 0.22, 0.12, 0.10 + 0.22 * k))
+		if rise_rate() > 0.0:
+			draw_arc(Vector2(geo.cx, geo.throat_y - 10.0), r + 6.0, 0, TAU, 32, Color(1.0, 0.35, 0.2, 0.15 + 0.25 * pulse * k), 5.0)
 
 func _draw_swirl(s: float) -> void:
 	var c := Vector2(geo.cx, geo.throat_y - 30.0)

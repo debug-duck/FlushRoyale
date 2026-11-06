@@ -1,52 +1,661 @@
 {
-  "_doc": "Levels in play order. Each level = its own 9 objects (tiers), background and optional config overrides (`params`, merged over data/config.json section by section). Tier sizes are NOT set here: every tier is scaled to config tiers.base_area * tiers.ratio^(tier-1), whatever the units of its shapes. `shapes` = hand-authored collision (units match `sprite_size`); tiers without `shapes` use data/shapes_generated.json (tools/asset_pipeline/fit_shapes.py, sprite-pixel units). density is relative to water (1.0): < 1 floats. com = custom centre of mass (shape units). Creating the last tier triggers the ROYAL FLUSH.",
-  "levels": [
-    {"id": "bathroom", "name": "THE BATHROOM", "background": "bg_bathroom.jpg", "spawn_weights": [45, 35, 20],
-     "tiers": [
-      {"name": "Rubber Duck", "density": 0.45, "bounce": 0.3, "color": "ffd23f", "sprite": "levels/bathroom/tier_1.png", "sprite_size": [100, 94],
-       "shapes": [{"type": "poly", "points": [[-50, -4], [-30, -12], [28, -8], [44, 14], [36, 40], [0, 47], [-36, 42], [-50, 20]]},
-                  {"type": "circle", "r": 25, "pos": [12, -20]}]},
-      {"name": "Toilet Paper", "density": 0.7, "color": "f4f1ea", "sprite": "levels/bathroom/tier_2.png", "sprite_size": [95, 116],
-       "shapes": [{"type": "rect", "size": [92, 112], "bevel": 12}]},
-      {"name": "Shampoo", "density": 1.15, "color": "2bb3c0", "sprite": "levels/bathroom/tier_3.png", "sprite_size": [91, 210],
-       "shapes": [{"type": "capsule", "r": 42, "h": 206}]},
-      {"name": "Plunger", "density": 0.85, "color": "d83a34", "com": [0, 100], "sprite": "levels/bathroom/tier_4.png", "sprite_size": [164, 330],
-       "shapes": [{"type": "poly", "points": [[-38, 75], [38, 75], [82, 140], [82, 160], [-82, 160], [-82, 140]]},
-                  {"type": "rect", "size": [24, 245], "pos": [0, -42]}]},
-      {"name": "Old Boot", "density": 1.3, "color": "8a5a36", "sprite": "levels/bathroom/tier_5.png", "sprite_size": [267, 236],
-       "shapes": [{"type": "rect", "size": [142, 138], "pos": [-41, -49]},
-                  {"type": "poly", "points": [[-122, 15], [50, 15], [128, 50], [133, 92], [-122, 100]]}]},
-      {"name": "Bathroom Scale", "density": 1.4, "color": "e8edf2", "sprite": "levels/bathroom/tier_6.png"},
-      {"name": "Washing Machine", "density": 1.1, "color": "dfe6ee", "sprite": "levels/bathroom/tier_7.png"},
-      {"name": "Bathtub", "density": 0.9, "color": "f7f7f7", "sprite": "levels/bathroom/tier_8.png"},
-      {"name": "Golden Toilet", "density": 1.8, "color": "f2b632", "sprite": "levels/bathroom/tier_9.png", "sprite_size": [284, 300],
-       "shapes": [{"type": "rect", "size": [115, 140], "pos": [-84, -80]},
-                  {"type": "poly", "points": [[-60, -70], [142, -70], [132, -20], [90, 40], [-60, 40]]},
-                  {"type": "poly", "points": [[-40, 40], [85, 40], [110, 150], [-55, 150]]}]}
-     ]},
-    {"id": "kitchen", "name": "THE KITCHEN", "background": "bg_kitchen.jpg", "spawn_weights": [45, 35, 20],
-     "tiers": [
-      {"name": "Cherry Tomato", "density": 0.95, "color": "e5322d", "sprite": "levels/kitchen/tier_1.png"},
-      {"name": "Fried Egg", "density": 0.6, "color": "ffd84a", "sprite": "levels/kitchen/tier_2.png"},
-      {"name": "Banana", "density": 0.85, "color": "ffe04a", "sprite": "levels/kitchen/tier_3.png"},
-      {"name": "Frying Pan", "density": 2.4, "color": "3a3d44", "sprite": "levels/kitchen/tier_4.png"},
-      {"name": "Teapot", "density": 1.5, "color": "2bb3b0", "sprite": "levels/kitchen/tier_5.png"},
-      {"name": "Roast Chicken", "density": 0.8, "color": "d98a3a", "sprite": "levels/kitchen/tier_6.png"},
-      {"name": "Microwave", "density": 1.2, "color": "8fd6b5", "sprite": "levels/kitchen/tier_7.png"},
-      {"name": "Fridge", "density": 0.7, "color": "f2ead0", "sprite": "levels/kitchen/tier_8.png"},
-      {"name": "Royal Cake", "density": 0.6, "color": "9fd3f5", "sprite": "levels/kitchen/tier_9.png"}
-     ]},
-    {"id": "palace", "name": "THE ROYAL PALACE", "background": "bg_palace.jpg", "spawn_weights": [45, 35, 20],
-     "tiers": [
-      {"name": "Gold Coin", "density": 3.0, "color": "f5c542", "sprite": "levels/palace/tier_1.png"},
-      {"name": "Diamond Ring", "density": 2.4, "color": "4aa3ff", "sprite": "levels/palace/tier_2.png"},
-      {"name": "Golden Goblet", "density": 1.4, "color": "f2b632", "sprite": "levels/palace/tier_3.png"},
-      {"name": "Scepter", "density": 1.6, "color": "2b5fd9", "sprite": "levels/palace/tier_4.png"},
-      {"name": "Crown", "density": 1.8, "color": "d8262c", "sprite": "levels/palace/tier_5.png"},
-      {"name": "Knight Helmet", "density": 1.5, "color": "b8c0cc", "sprite": "levels/palace/tier_6.png"},
-      {"name": "Treasure Chest", "density": 1.2, "color": "8a5a36", "sprite": "levels/palace/tier_7.png"},
-      {"name": "Suit of Armour", "density": 2.0, "color": "c8d0dc", "sprite": "levels/palace/tier_8.png"},
-      {"name": "Royal Throne", "density": 1.3, "color": "2b4fd9", "sprite": "levels/palace/tier_9.png"}
-     ]}
-  ]
+ "_doc": "Levels in play order (`levels`). Each level = its own 9 objects (tiers), background, tagline, royal_message and optional config overrides (`params`, merged over data/config.json section by section). Tier sizes are NOT set here: every tier is scaled to config tiers.base_area * tiers.ratio^(tier-1). `shapes` = hand-authored collision (units match `sprite_size`); tiers without `shapes` use data/shapes_generated.json. density is relative to water (1.0): < 1 floats; friction (default 0.45) and bounce (default 0.12) give objects personality. Creating the last tier unlocks the ROYAL FLUSH. `bonus_levels` = PoC 2 locations (bathroom, kitchen, palace), kept for a future intro/bonus level, not in the play order.",
+ "levels": [
+  {
+   "id": "dorm",
+   "name": "THE DORMITORY",
+   "tagline": "Higher Education, Lower Standards",
+   "royal_message": "YOUR EDUCATION HAS BEEN FLUSHED!",
+   "background": "bg_dorm.jpg",
+   "spawn_weights": [
+    45,
+    35,
+    20
+   ],
+   "tiers": [
+    {
+     "name": "Party Cup",
+     "density": 0.45,
+     "color": "d8332b",
+     "sprite": "levels/dorm/tier_1.png",
+     "bounce": 0.3
+    },
+    {
+     "name": "Moldy Pizza",
+     "density": 0.8,
+     "color": "e8a33c",
+     "sprite": "levels/dorm/tier_2.png"
+    },
+    {
+     "name": "Radioactive Sock",
+     "density": 0.28,
+     "color": "9be33c",
+     "sprite": "levels/dorm/tier_3.png",
+     "_why": "unusually buoyant"
+    },
+    {
+     "name": "Unopened Textbook",
+     "density": 1.9,
+     "color": "2f5fb8",
+     "sprite": "levels/dorm/tier_4.png",
+     "friction": 0.7,
+     "_why": "heavy, sinks"
+    },
+    {
+     "name": "Emotional Support Plushie",
+     "density": 0.55,
+     "color": "a8743c",
+     "sprite": "levels/dorm/tier_5.png",
+     "bounce": 0.35
+    },
+    {
+     "name": "Laptop with 73 Tabs",
+     "density": 1.15,
+     "color": "9aa3ad",
+     "sprite": "levels/dorm/tier_6.png"
+    },
+    {
+     "name": "Filthy Couch",
+     "density": 0.85,
+     "color": "8a5a36",
+     "sprite": "levels/dorm/tier_7.png",
+     "friction": 0.9,
+     "_why": "wide and awkward"
+    },
+    {
+     "name": "Student Debt Monster",
+     "density": 1.25,
+     "color": "e8e4d0",
+     "sprite": "levels/dorm/tier_8.png"
+    },
+    {
+     "name": "Entire University",
+     "density": 1.5,
+     "color": "b84a3a",
+     "sprite": "levels/dorm/tier_9.png"
+    }
+   ]
+  },
+  {
+   "id": "whitehouse",
+   "name": "THE WHITE HOUSE",
+   "tagline": "Make America Flush Again!",
+   "royal_message": "MAKE AMERICA FLUSH AGAIN!",
+   "background": "bg_whitehouse.jpg",
+   "spawn_weights": [
+    45,
+    35,
+    20
+   ],
+   "tiers": [
+    {
+     "name": "Presidential Pen",
+     "density": 0.9,
+     "color": "2a3f8f",
+     "sprite": "levels/whitehouse/tier_1.png"
+    },
+    {
+     "name": "Presidential Phone",
+     "density": 1.05,
+     "color": "d8332b",
+     "sprite": "levels/whitehouse/tier_2.png",
+     "friction": 0.03,
+     "bounce": 0.25,
+     "_why": "slippery"
+    },
+    {
+     "name": "Classified Documents",
+     "density": 0.7,
+     "color": "e8c98a",
+     "sprite": "levels/whitehouse/tier_3.png"
+    },
+    {
+     "name": "Ballot Box",
+     "density": 0.8,
+     "color": "2a4fb8",
+     "sprite": "levels/whitehouse/tier_4.png"
+    },
+    {
+     "name": "Presidential Megaphone",
+     "density": 1.1,
+     "color": "e8e8f0",
+     "sprite": "levels/whitehouse/tier_5.png"
+    },
+    {
+     "name": "Nuclear Football",
+     "density": 2.8,
+     "color": "2b2b30",
+     "sprite": "levels/whitehouse/tier_6.png",
+     "friction": 0.6,
+     "_why": "particularly heavy"
+    },
+    {
+     "name": "Bald Eagle",
+     "density": 0.6,
+     "color": "8a5a36",
+     "sprite": "levels/whitehouse/tier_7.png",
+     "bounce": 0.25
+    },
+    {
+     "name": "Statue of Liberty",
+     "density": 1.7,
+     "color": "6fc7a8",
+     "sprite": "levels/whitehouse/tier_8.png"
+    },
+    {
+     "name": "The White House",
+     "density": 1.2,
+     "color": "f2f2f2",
+     "sprite": "levels/whitehouse/tier_9.png"
+    }
+   ]
+  },
+  {
+   "id": "royal",
+   "name": "THE ROYAL PALACE",
+   "tagline": "The Ultimate Royal Flush",
+   "royal_message": "THE KING HAS LEFT THE BUILDING!",
+   "background": "bg_royal.jpg",
+   "spawn_weights": [
+    45,
+    35,
+    20
+   ],
+   "tiers": [
+    {
+     "name": "Silver Spoon",
+     "density": 1.6,
+     "color": "c8ccd4",
+     "sprite": "levels/royal/tier_1.png"
+    },
+    {
+     "name": "Royal Teapot",
+     "density": 1.15,
+     "color": "3a5fd9",
+     "sprite": "levels/royal/tier_2.png"
+    },
+    {
+     "name": "Tiny Crown",
+     "density": 1.5,
+     "color": "f2b632",
+     "sprite": "levels/royal/tier_3.png"
+    },
+    {
+     "name": "Royal Frog",
+     "density": 0.55,
+     "color": "5cc04a",
+     "sprite": "levels/royal/tier_4.png",
+     "bounce": 0.45,
+     "_why": "floats"
+    },
+    {
+     "name": "Palace Guard",
+     "density": 1.1,
+     "color": "d8262c",
+     "sprite": "levels/royal/tier_5.png"
+    },
+    {
+     "name": "Golden Throne",
+     "density": 2.6,
+     "color": "f2b632",
+     "sprite": "levels/royal/tier_6.png",
+     "friction": 1.0,
+     "_why": "heavy and hard to dislodge"
+    },
+    {
+     "name": "Royal Horse",
+     "density": 1.0,
+     "color": "f2f2f2",
+     "sprite": "levels/royal/tier_7.png"
+    },
+    {
+     "name": "Royal Castle",
+     "density": 1.6,
+     "color": "e8d8b0",
+     "sprite": "levels/royal/tier_8.png"
+    },
+    {
+     "name": "The King",
+     "density": 0.95,
+     "color": "d8262c",
+     "sprite": "levels/royal/tier_9.png"
+    }
+   ]
+  }
+ ],
+ "bonus_levels": [
+  {
+   "id": "bathroom",
+   "name": "THE BATHROOM",
+   "background": "bg_bathroom.jpg",
+   "spawn_weights": [
+    45,
+    35,
+    20
+   ],
+   "tiers": [
+    {
+     "name": "Rubber Duck",
+     "density": 0.45,
+     "bounce": 0.3,
+     "color": "ffd23f",
+     "sprite": "levels/bathroom/tier_1.png",
+     "sprite_size": [
+      100,
+      94
+     ],
+     "shapes": [
+      {
+       "type": "poly",
+       "points": [
+        [
+         -50,
+         -4
+        ],
+        [
+         -30,
+         -12
+        ],
+        [
+         28,
+         -8
+        ],
+        [
+         44,
+         14
+        ],
+        [
+         36,
+         40
+        ],
+        [
+         0,
+         47
+        ],
+        [
+         -36,
+         42
+        ],
+        [
+         -50,
+         20
+        ]
+       ]
+      },
+      {
+       "type": "circle",
+       "r": 25,
+       "pos": [
+        12,
+        -20
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Toilet Paper",
+     "density": 0.7,
+     "color": "f4f1ea",
+     "sprite": "levels/bathroom/tier_2.png",
+     "sprite_size": [
+      95,
+      116
+     ],
+     "shapes": [
+      {
+       "type": "rect",
+       "size": [
+        92,
+        112
+       ],
+       "bevel": 12
+      }
+     ]
+    },
+    {
+     "name": "Shampoo",
+     "density": 1.15,
+     "color": "2bb3c0",
+     "sprite": "levels/bathroom/tier_3.png",
+     "sprite_size": [
+      91,
+      210
+     ],
+     "shapes": [
+      {
+       "type": "capsule",
+       "r": 42,
+       "h": 206
+      }
+     ]
+    },
+    {
+     "name": "Plunger",
+     "density": 0.85,
+     "color": "d83a34",
+     "com": [
+      0,
+      100
+     ],
+     "sprite": "levels/bathroom/tier_4.png",
+     "sprite_size": [
+      164,
+      330
+     ],
+     "shapes": [
+      {
+       "type": "poly",
+       "points": [
+        [
+         -38,
+         75
+        ],
+        [
+         38,
+         75
+        ],
+        [
+         82,
+         140
+        ],
+        [
+         82,
+         160
+        ],
+        [
+         -82,
+         160
+        ],
+        [
+         -82,
+         140
+        ]
+       ]
+      },
+      {
+       "type": "rect",
+       "size": [
+        24,
+        245
+       ],
+       "pos": [
+        0,
+        -42
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Old Boot",
+     "density": 1.3,
+     "color": "8a5a36",
+     "sprite": "levels/bathroom/tier_5.png",
+     "sprite_size": [
+      267,
+      236
+     ],
+     "shapes": [
+      {
+       "type": "rect",
+       "size": [
+        142,
+        138
+       ],
+       "pos": [
+        -41,
+        -49
+       ]
+      },
+      {
+       "type": "poly",
+       "points": [
+        [
+         -122,
+         15
+        ],
+        [
+         50,
+         15
+        ],
+        [
+         128,
+         50
+        ],
+        [
+         133,
+         92
+        ],
+        [
+         -122,
+         100
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Bathroom Scale",
+     "density": 1.4,
+     "color": "e8edf2",
+     "sprite": "levels/bathroom/tier_6.png"
+    },
+    {
+     "name": "Washing Machine",
+     "density": 1.1,
+     "color": "dfe6ee",
+     "sprite": "levels/bathroom/tier_7.png"
+    },
+    {
+     "name": "Bathtub",
+     "density": 0.9,
+     "color": "f7f7f7",
+     "sprite": "levels/bathroom/tier_8.png"
+    },
+    {
+     "name": "Golden Toilet",
+     "density": 1.8,
+     "color": "f2b632",
+     "sprite": "levels/bathroom/tier_9.png",
+     "sprite_size": [
+      284,
+      300
+     ],
+     "shapes": [
+      {
+       "type": "rect",
+       "size": [
+        115,
+        140
+       ],
+       "pos": [
+        -84,
+        -80
+       ]
+      },
+      {
+       "type": "poly",
+       "points": [
+        [
+         -60,
+         -70
+        ],
+        [
+         142,
+         -70
+        ],
+        [
+         132,
+         -20
+        ],
+        [
+         90,
+         40
+        ],
+        [
+         -60,
+         40
+        ]
+       ]
+      },
+      {
+       "type": "poly",
+       "points": [
+        [
+         -40,
+         40
+        ],
+        [
+         85,
+         40
+        ],
+        [
+         110,
+         150
+        ],
+        [
+         -55,
+         150
+        ]
+       ]
+      }
+     ]
+    }
+   ],
+   "bonus": true
+  },
+  {
+   "id": "kitchen",
+   "name": "THE KITCHEN",
+   "background": "bg_kitchen.jpg",
+   "spawn_weights": [
+    45,
+    35,
+    20
+   ],
+   "tiers": [
+    {
+     "name": "Cherry Tomato",
+     "density": 0.95,
+     "color": "e5322d",
+     "sprite": "levels/kitchen/tier_1.png"
+    },
+    {
+     "name": "Fried Egg",
+     "density": 0.6,
+     "color": "ffd84a",
+     "sprite": "levels/kitchen/tier_2.png"
+    },
+    {
+     "name": "Banana",
+     "density": 0.85,
+     "color": "ffe04a",
+     "sprite": "levels/kitchen/tier_3.png"
+    },
+    {
+     "name": "Frying Pan",
+     "density": 2.4,
+     "color": "3a3d44",
+     "sprite": "levels/kitchen/tier_4.png"
+    },
+    {
+     "name": "Teapot",
+     "density": 1.5,
+     "color": "2bb3b0",
+     "sprite": "levels/kitchen/tier_5.png"
+    },
+    {
+     "name": "Roast Chicken",
+     "density": 0.8,
+     "color": "d98a3a",
+     "sprite": "levels/kitchen/tier_6.png"
+    },
+    {
+     "name": "Microwave",
+     "density": 1.2,
+     "color": "8fd6b5",
+     "sprite": "levels/kitchen/tier_7.png"
+    },
+    {
+     "name": "Fridge",
+     "density": 0.7,
+     "color": "f2ead0",
+     "sprite": "levels/kitchen/tier_8.png"
+    },
+    {
+     "name": "Royal Cake",
+     "density": 0.6,
+     "color": "9fd3f5",
+     "sprite": "levels/kitchen/tier_9.png"
+    }
+   ],
+   "bonus": true
+  },
+  {
+   "id": "palace",
+   "name": "THE ROYAL PALACE",
+   "background": "bg_palace.jpg",
+   "spawn_weights": [
+    45,
+    35,
+    20
+   ],
+   "tiers": [
+    {
+     "name": "Gold Coin",
+     "density": 3.0,
+     "color": "f5c542",
+     "sprite": "levels/palace/tier_1.png"
+    },
+    {
+     "name": "Diamond Ring",
+     "density": 2.4,
+     "color": "4aa3ff",
+     "sprite": "levels/palace/tier_2.png"
+    },
+    {
+     "name": "Golden Goblet",
+     "density": 1.4,
+     "color": "f2b632",
+     "sprite": "levels/palace/tier_3.png"
+    },
+    {
+     "name": "Scepter",
+     "density": 1.6,
+     "color": "2b5fd9",
+     "sprite": "levels/palace/tier_4.png"
+    },
+    {
+     "name": "Crown",
+     "density": 1.8,
+     "color": "d8262c",
+     "sprite": "levels/palace/tier_5.png"
+    },
+    {
+     "name": "Knight Helmet",
+     "density": 1.5,
+     "color": "b8c0cc",
+     "sprite": "levels/palace/tier_6.png"
+    },
+    {
+     "name": "Treasure Chest",
+     "density": 1.2,
+     "color": "8a5a36",
+     "sprite": "levels/palace/tier_7.png"
+    },
+    {
+     "name": "Suit of Armour",
+     "density": 2.0,
+     "color": "c8d0dc",
+     "sprite": "levels/palace/tier_8.png"
+    },
+    {
+     "name": "Royal Throne",
+     "density": 1.3,
+     "color": "2b4fd9",
+     "sprite": "levels/palace/tier_9.png"
+    }
+   ],
+   "bonus": true
+  }
+ ]
 }

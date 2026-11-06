@@ -15,7 +15,17 @@
     "_doc": "Size curve shared by every level: tier t covers base_area * ratio^(t-1) px^2 (1.45 => tier 9 ~19x tier 1). resistance[t-1] = seconds at full drain pressure to squeeze a plug of that tier through.",
     "base_area": 3900,
     "ratio": 1.45,
-    "resistance": [0.6, 0.6, 0.7, 1.0, 1.4, 2.0, 2.6, 3.2, 4.0]
+    "resistance": [
+      0.6,
+      0.6,
+      0.7,
+      1.2,
+      1.8,
+      2.6,
+      3.4,
+      4.2,
+      5.0
+    ]
   },
   "merge": {
     "momentum_kept": 0.85,
@@ -32,10 +42,10 @@
     "max_mult": 4.0
   },
   "meter": {
-    "_doc": "Flush is an earned ability: merges fill the meter (per_merge + tier_bonus*(new_tier-2), x chain multiplier, + triple_bonus); a full meter = +1 flush charge.",
-    "per_merge": 0.09,
-    "tier_bonus": 0.03,
-    "triple_bonus": 0.35,
+    "_doc": "Flush is an earned ability: merges fill the meter (per_merge + tier_bonus*(new_tier-2), x chain multiplier, + triple_bonus); a full meter = +1 flush charge. PoC 3: charges are the emergency flushes.",
+    "per_merge": 0.045,
+    "tier_bonus": 0.02,
+    "triple_bonus": 0.25,
     "start_charges": 1,
     "max_charges": 3
   },
@@ -46,39 +56,48 @@
     "duration": 5.0,
     "stagger": 0.16,
     "multiplier": 3,
-    "timeout": 9.0
+    "timeout": 9.0,
+    "settle": 1.2,
+    "_ready_doc": "After the last tier is made: wait until no merge for `settle` s (the cascade finishes), then the FLUSH button becomes ROYAL FLUSH; overflow is off from the moment the last tier exists."
   },
   "water": {
     "density": 1.0,
     "linear_drag": 2.4,
     "angular_drag": 3.0,
     "refill_rate": 42000,
-    "passive_drain": 9000,
     "level_smoothing": 10.0,
     "splash_speed": 260,
     "ripple_columns": 54,
     "ripple_stiffness": 70.0,
     "ripple_damping": 3.2,
-    "ripple_spread": 0.22
+    "ripple_spread": 0.22,
+    "_pressure_doc": "PoC 3 arcade pressure: the drain's smoothed obstruction (0..1) drives the water. Below rise_from the water recovers toward rest at recover_rate px^2/s; above it the water RISES at rise_min..rise_max px^2/s (linear in obstruction). Displacement of submerged objects still adds on top. Overflow capacity from rest is ~380k px^2.",
+    "rise_from": 0.45,
+    "rise_min": 5500,
+    "rise_max": 15000,
+    "recover_rate": 7000
   },
   "flush": {
-    "duration": 3.0,
-    "cooldown": 0.6,
-    "inflow_total": 110000,
+    "duration": 2.2,
+    "cooldown": 0.8,
+    "inflow_total": 0,
     "inflow_time": 1.8,
-    "outflow_rate": 95000,
-    "siphon_tail": 1.4,
+    "outflow_rate": 140000,
+    "siphon_tail": 0.9,
     "_vortex_doc": "Side view of a whirlpool around the vertical drain axis: suction pulls DOWN (strongest on the axis), objects are drawn TOWARD the axis, the swirl shows as a sideways slosh + spin. All scaled by 1/(1 + distance_to_drain/falloff).",
-    "radial": 3000,
+    "radial": 2900,
     "axis_width": 260,
     "center_pull": 3.2,
     "tangential": 1100,
     "swirl_speed": 5.0,
-    "falloff": 420,
+    "falloff": 260,
     "spin_torque": 7.0,
     "outlet_pull": 3800,
     "ramp_in": 0.3,
-    "ramp_out": 0.7
+    "ramp_out": 0.7,
+    "_doc": "EMERGENCY FLUSH (costs a charge, scores nothing): strong vortex for `duration`, the drain removes outflow_rate*(1-blockage) px^2/s down to floor_below_rest px under the rest level; whatever reaches the outlet is lost. Plugs build squeeze pressure and can be pushed through (sacrificed). Water leaks past a plug: outflow = outflow_rate * (1 - blockage * (1 - leak_past_plug)), so even a plugged flush buys some time.",
+    "floor_below_rest": 150,
+    "leak_past_plug": 0.5
   },
   "drain": {
     "check_from_y": 1290,
@@ -92,7 +111,14 @@
     "lodge_max_speed": 420,
     "squeeze_decay": 0.06,
     "max_pressure_bonus": 1.2,
-    "pass_speed": 950
+    "pass_speed": 950,
+    "_obstruct_doc": "obstruction = smoothed (obstruct_tau s) MEAN coverage of all drain lines from throat-obstruct_above down into the outlet (one object sitting in the throat = partial, a packed funnel = severe), or plug_seal when a wedged plug seals the funnel. Passing objects are filtered out by the smoothing. A plug counts as plug_seal * clamp(width / (drain_w * plug_full_width), plug_min_share, 1).",
+    "obstruct_above": 220,
+    "obstruct_tau": 1.4,
+    "clear_below": 0.22,
+    "clog_above": 0.38,
+    "plug_full_width": 1.8,
+    "plug_min_share": 0.35
   },
   "overflow": {
     "grace_time": 3.0

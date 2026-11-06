@@ -27,6 +27,9 @@ func _ready() -> void:
 	await test_triple_merge()
 	await test_chain()
 	await test_royal_flush_and_levels()
+	await test_rising_water()
+	await test_natural_clear()
+	await test_emergency_flush_sacrifice()
 	test_localisation()
 	test_project_and_export()
 	Game.carry = {}
@@ -313,27 +316,30 @@ func test_merge_chain_and_max_tier() -> void:
 
 func test_float_and_sink() -> void:
 	await new_game()
-	var duck := game.make_object(1, Vector2(400, 1000))
-	var boot := game.make_object(5, Vector2(700, 1000))
+	var duck := game.make_object(1, Vector2(400, 1000))      # party cup, density 0.45
+	var boot := game.make_object(4, Vector2(700, 1000))      # unopened textbook, density 1.9
 	await seconds(5.0)
 	var lvl := game.water.level_y
-	ok(duck.sub_frac > 0.1 and duck.sub_frac < 0.9, "duck floats partially submerged (%.2f)" % duck.sub_frac)
-	near(duck.global_position.y, lvl, 50.0, "duck floats at the surface")
-	ok(boot.sub_frac > 0.99, "boot is fully submerged")
-	ok(boot.global_position.y > lvl + 120.0, "boot sank to the bottom")
+	ok(duck.sub_frac > 0.1 and duck.sub_frac < 0.9, "party cup floats partially submerged (%.2f)" % duck.sub_frac)
+	near(duck.global_position.y, lvl, 60.0, "party cup floats at the surface")
+	ok(boot.sub_frac > 0.99, "textbook is fully submerged")
+	ok(boot.global_position.y > lvl + 120.0, "textbook sank to the bottom")
 	var tp := game.make_object(2, Vector2(540, 1000))
 	await seconds(4.0)
-	ok(tp.sub_frac > duck.sub_frac, "denser toilet paper floats lower than the duck")
+	ok(tp.sub_frac > duck.sub_frac, "denser pizza floats lower than the cup")
+	var sock := game.make_object(3, Vector2(300, 1000))      # radioactive sock, 0.28: unusually buoyant
+	await seconds(4.0)
+	ok(sock.sub_frac < tp.sub_frac, "radioactive sock rides higher than the pizza (%.2f < %.2f)" % [sock.sub_frac, tp.sub_frac])
 
 func test_displacement_raises_level() -> void:
 	await new_game()
 	await seconds(0.5)
 	var before := game.water.level_y
-	var b := game.make_object(5, Vector2(540, 1250))
+	var b := game.make_object(7, Vector2(540, 1100))         # filthy couch: floats, mostly submerged
 	await seconds(3.0)
 	var after := game.water.level_y
-	var expected := b.area / Cfg.geo.width_at(before)
-	ok(before - after > expected * 0.6, "submerged boot raises the water (%.1f px, ~%.1f expected)" % [before - after, expected])
+	var expected := b.area * b.sub_frac / Cfg.geo.width_at(before)
+	ok(before - after > expected * 0.6, "the submerged part of the couch raises the water (%.1f px, ~%.1f expected)" % [before - after, expected])
 	game.remove_object(b)
 	await seconds(2.0)
 	near(game.water.level_y, before, 3.0, "level returns when the object is gone")
@@ -362,7 +368,8 @@ func test_flush_moves_and_removes() -> void:
 	ok(lowest > lvl0 + 60.0, "free flush lowers the visible water level (%.0f -> %.0f)" % [lvl0, lowest])
 	ok(not is_instance_valid(duck) or not game.objects.has(duck), "small floating duck got flushed")
 	ok(not is_instance_valid(tp) or not game.objects.has(tp), "toilet paper got flushed")
-	ok(game.score >= Cfg.flush_points(1) + Cfg.flush_points(2), "flushing scores (score %d)" % game.score)
+	ok(game.score == 0, "an emergency flush scores nothing (score %d)" % game.score)
+	ok(game.stats.lost.get(1, 0) + game.stats.lost.get(2, 0) == 2, "flushed objects are LOST")
 	ok(not game.water.can_flush(), "flush has a cooldown")
 	await seconds(float(Cfg.c.flush.cooldown) + 0.2)
 	ok(game.water.can_flush(), "flush ready again after the cooldown")
@@ -373,12 +380,12 @@ func test_blockage_restricts_drainage() -> void:
 	await new_game()
 	var gold := game.make_object(9, Vector2(540, 1250))
 	await seconds(4.0)
-	ok(game.water.blockage > 0.8, "golden toilet blocks the drain (blockage %.2f)" % game.water.blockage)
-	ok(game.water.plug == gold, "golden toilet is detected as the plug")
+	ok(game.water.blockage > 0.8, "the university blocks the drain (blockage %.2f)" % game.water.blockage)
+	ok(game.water.plug == gold, "it is detected as the plug")
 	var lvl0 := game.water.level_y
 	game.request_flush()
 	await seconds(1.9)
-	ok(game.water.level_y < lvl0 - 40.0, "blocked flush RAISES the water (%.0f -> %.0f)" % [lvl0, game.water.level_y])
+	ok(game.water.level_y > lvl0 - 20.0, "a blocked emergency flush does not drain (%.0f -> %.0f)" % [lvl0, game.water.level_y])
 	ok(gold.squeeze > 0.2, "drain pressure builds up on the plug (%.2f)" % gold.squeeze)
 	# a free bowl drains the same flush
 	await new_game()
@@ -397,7 +404,7 @@ func test_every_tier_flushable() -> void:
 			var oid := o.get_instance_id()
 			var n := await flush_until(func(): return not is_instance_id_valid(oid), 6)
 			ok(not is_instance_id_valid(oid), "%s tier %d can be flushed (took %d flushes)" % [Cfg.level_id(), t, n])
-			ok(game.stats.flushed.get(t, 0) == 1, "%s tier %d flush scored" % [Cfg.level_id(), t])
+			ok(game.stats.flushed.get(t, 0) == 1 and game.stats.lost.get(t, 0) == 1, "%s tier %d went down the drain (lost)" % [Cfg.level_id(), t])
 			ok(not game.game_over, "flushing a lone %s tier %d does not flood the toilet" % [Cfg.level_id(), t])
 			print("  %s tier %d flushed after %d flush(es)" % [Cfg.level_id(), t, n])
 
@@ -499,14 +506,24 @@ func test_royal_flush_and_levels() -> void:
 		var b := game.make_object(8, Vector2(720, 650))
 		a.linear_velocity = Vector2(500, 0)
 		b.linear_velocity = Vector2(-500, 0)
-		var started := false
+		var unlocked := false
 		for i in 60 * 3:
 			await get_tree().physics_frame
-			if game.state == Game.State.ROYAL:
-				started = true
+			if game.state == Game.State.ROYAL_READY:
+				unlocked = true
 				break
-		ok(started, "%s: merging two tier-8 objects starts the ROYAL FLUSH" % Cfg.level_id())
+		ok(unlocked, "%s: merging two tier-8 objects unlocks the ROYAL FLUSH" % Cfg.level_id())
 		ok(game.discovered.has(9), "%s: the royal object is discovered" % Cfg.level_id())
+		ok(not game.launcher.enabled, "no throwing once the royal flush is unlocked")
+		# the level is won: an overflow can no longer steal it
+		game.water.frozen = false
+		game.water.volume = Cfg.geo.volume_at_level(Cfg.bowl.overflow_y - 80)
+		game.water.frozen = true
+		await seconds(float(Cfg.c.overflow.grace_time) + 1.0)
+		ok(game.state == Game.State.ROYAL_READY and not game.game_over, "%s: overflow cannot end a won level" % Cfg.level_id())
+		ok(game.royal_armed, "%s: the royal flush is armed once the cascade settled" % Cfg.level_id())
+		ok(game.can_flush(), "the button now fires the royal flush")
+		ok(game.request_flush() and game.state == Game.State.ROYAL, "%s: the player triggers the ROYAL FLUSH" % Cfg.level_id())
 		ok(not game.launcher.enabled, "no throwing during the royal flush")
 		var done := false
 		for i in 60 * 20:
@@ -574,15 +591,16 @@ func test_localisation() -> void:
 			if display.search(line) and not line.strip_edges().begins_with("#") and not line.contains("func "):
 				var rest := call.sub(line, "", true)
 				rest = RegEx.create_from_string('Color\\([^)]*\\)').sub(rest, "", true)
+				rest = RegEx.create_from_string('level_text\\("[a-z_]+"\\)').sub(rest, "", true)   # data keys, not text
 				ok(literal.search(rest) == null, "untranslated text at %s:%d: %s" % [path.get_file(), i + 1, line.strip_edges()])
 	# runtime: a language table is used, formats fill after translating, unknown keys fall back to English
 	ok(Loc.system_language() == "en", "desktop/editor language is English")
-	Loc.use_table("xx", {"FLUSH": "SPUEL", "CHAIN x%d": "KETTE x%d", "Rubber Duck": "Quietscheente", "THE BATHROOM": "DAS BAD"})
+	Loc.use_table("xx", {"FLUSH": "SPUEL", "CHAIN x%d": "KETTE x%d", "Party Cup": "Partybecher", "THE DORMITORY": "DAS WOHNHEIM"})
 	ok(Loc.t("FLUSH") == "SPUEL", "translated string")
 	ok(Loc.t("CHAIN x%d") % 3 == "KETTE x3", "format translated before filling")
 	ok(Loc.t("NOT A KEY") == "NOT A KEY", "unknown text falls back to English")
 	Cfg.set_level(0)
-	ok(Loc.t(Cfg.level_def().name) == "DAS BAD" and Loc.t(Cfg.tier(1).name) == "Quietscheente", "level and object names translate")
+	ok(Loc.t(Cfg.level_def().name) == "DAS WOHNHEIM" and Loc.t(Cfg.tier(1).name) == "Partybecher", "level and object names translate")
 	Loc.set_language("en")
 	ok(Loc.t("FLUSH") == "FLUSH" and Loc.lang == "en", "back to English")
 	# shipped languages must keep the placeholders of every key
@@ -595,6 +613,84 @@ func test_localisation() -> void:
 			var a := ph.search_all(k).map(func(m): return m.get_string())
 			var b := ph.search_all(str(tr[k])).map(func(m): return m.get_string())
 			ok(a == b, "%s.json keeps the placeholders of '%s'" % [code, k])
+
+# ------------------------------------------------------------------ PoC 3: arcade pressure
+
+## Water rises while the drain is obstructed (faster when worse), recovers when it is clear.
+func test_rising_water() -> void:
+	await new_game()
+	await seconds(2.0)
+	near(game.water.level_y, Cfg.bowl.rest_level_y, 6.0, "a clear drain holds the rest level")
+	ok(game.water.rise_rate() == 0.0, "no rising with a clear drain")
+	# one sunk textbook is only a warning; two objects in the drain = partial obstruction
+	var book := game.make_object(4, Vector2(540, 1300))
+	await seconds(5.0)
+	ok(game.water.obstruction > float(Cfg.c.drain.clog_above) and game.water.rise_rate() == 0.0, "a single textbook in the drain is a warning, not yet rising (%.2f)" % game.water.obstruction)
+	var book2 := game.make_object(6, Vector2(500, 1150))
+	await seconds(5.0)
+	var partial: float = game.water.rise_rate()
+	ok(game.water.obstruction > float(Cfg.c.water.rise_from), "textbook + laptop obstruct the drain (%.2f)" % game.water.obstruction)
+	ok(partial > 0.0, "obstructed drain: the water rises")
+	var cap := Cfg.geo.volume_at_level(Cfg.bowl.overflow_y) - Cfg.geo.volume_at_level(Cfg.bowl.rest_level_y)
+	print("  partial obstruction %.2f: rise %.0f/s = %.0f s to overflow" % [game.water.obstruction, partial, cap / maxf(partial, 1.0)])
+	ok(cap / partial > 30.0 and cap / partial < 70.0, "partial obstruction overflows in ~40-60 s (%.0f s)" % (cap / partial))
+	var l0 := game.water.level_y
+	await seconds(3.0)
+	ok(game.water.level_y < l0 - 5.0, "the level climbs while obstructed")
+	# severe: the university wedged in the funnel
+	game.remove_object(book)
+	game.remove_object(book2)
+	game.make_object(9, Vector2(540, 1200))
+	await seconds(5.0)
+	var severe: float = game.water.rise_rate()
+	print("  severe obstruction %.2f: rise %.0f/s = %.0f s to overflow" % [game.water.obstruction, severe, cap / maxf(severe, 1.0)])
+	ok(severe > partial, "a severe clog rises faster than a partial one")
+	ok(cap / severe > 18.0 and cap / severe < 35.0, "severe obstruction overflows in ~20-30 s (%.0f s)" % (cap / severe))
+	# clear again: recovery
+	for o in game.objects.duplicate():
+		game.remove_object(o)
+	var high := game.water.level_y
+	await seconds(4.0)
+	ok(game.water.rise_rate() == 0.0, "rising stops when the drain clears")
+	ok(game.water.level_y > high + 10.0, "the water recovers toward rest (%.0f -> %.0f)" % [high, game.water.level_y])
+
+## A clog can clear itself: two textbooks in the drain merge into a floating plushie.
+func test_natural_clear() -> void:
+	await new_game()
+	game.make_object(4, Vector2(540, 1300))
+	await seconds(5.0)
+	ok(game.water.obstruction > float(Cfg.c.drain.clog_above), "textbook clogs the drain (%.2f)" % game.water.obstruction)
+	var b := game.make_object(4, Vector2(560, 1000))
+	b.linear_velocity = Vector2(0, 700)
+	for i in 60 * 8:
+		await get_tree().physics_frame
+		if game.stats.clears > 0:
+			break
+	ok(game.stats.merges >= 1, "the second textbook merges with the plug")
+	ok(game.stats.clears >= 1, "the merge cleared the drain (floating plushie): UNCLOGGED")
+
+## The emergency flush can save the bowl but costs valuable objects.
+func test_emergency_flush_sacrifice() -> void:
+	await new_game(false, 0, true)
+	game.charges = 3
+	var couch := game.make_object(8, Vector2(540, 1150))     # student debt monster: sinks and plugs the funnel
+	await seconds(4.0)
+	game.water.volume = Cfg.geo.volume_at_level(900.0)
+	await seconds(0.5)
+	var high := game.water.level_y
+	var cid := couch.get_instance_id()
+	var flushes := 0
+	while flushes < 3 and is_instance_id_valid(cid):
+		while not game.water.can_flush():
+			await step(5)
+		ok(game.request_flush(), "emergency flush %d spends a charge" % (flushes + 1))
+		flushes += 1
+		await seconds(float(Cfg.c.flush.duration) + float(Cfg.c.flush.siphon_tail) + 0.3)
+	ok(not is_instance_id_valid(cid), "the plugging debt monster was pushed through: sacrificed (%d flushes)" % flushes)
+	ok(game.stats.lost.get(8, 0) == 1, "it counts as LOST")
+	ok(game.score == 0, "no points for an emergency flush")
+	ok(game.water.level_y > high + 120.0, "clearing the plug lowered the water a lot (%.0f -> %.0f)" % [high, game.water.level_y])
+	ok(game.charges == 3 - flushes, "charges were spent")
 
 func test_project_and_export() -> void:
 	ok(ProjectSettings.get_setting("display/window/handheld/orientation") == 1, "portrait orientation")

@@ -57,14 +57,23 @@ AIM → THROW → MERGE → GROW → FLUSH → SCORE / CLOG → RECOVER. Comedy 
 * **The card gets flushed too:** on ROYAL FLUSH it shakes/tilts/shrinks during the slow-mo, then tears into its pieces (panel chunks
   with their bit of frame, ribbon, picture, every letter, every word, stars) that spiral into the drain; then the ROYAL FLUSH banner,
   and the level transition waits for it. No Layer spend (reuses the object art), all tweens/procedural.
-Still out of scope: settings, ads, store, power-ups, dialogue system / cutscenes (see §9).
+**PoC 4.1** (owner feedback 2026-11-06: "megaphone is really hard to merge" + first bonus):
+* **Merge fix:** the contact signal only reports NEW contacts and ≤ `max_contacts_reported` points per body, so in a crowded bowl two
+  matching objects could rest against each other forever (big polygons like the megaphone touch many neighbours). `Game._scan_touching`
+  shape-tests matching pairs every `merge.scan_interval` (0.12 s, `touch_pad` 4 px) and merges them (`stats.scan_merges`).
+* **TOILET SHAKE bonus** (the first bonus): merges fill a second meter (`shake.per_merge` 0.06 ≈ 17 merges, triple +0.06; max 2
+  stored) → SHAKE button (bottom left, hand icon). A giant cut-out engraving hand (Layer, absurd 1970s British collage-animation
+  style, 12 fps stop-motion) reaches down, grips the right rim and shakes the toilet: every object lurches and hops, stuck plugs
+  are kicked out of the drain, camera shake/tilt + water slosh. Key S. Gameplay value: unsticks resting / wedged objects
+  (new contacts → merges) and unclogs (the `cleared` drop lowers the water).
+Still out of scope: settings, ads, store, more power-ups, dialogue system / cutscenes (see §9).
 
 ## 2. Status
 * Engine pinned **Godot 4.4.1-stable** (`tools/ci/godot_version.env`), GDScript, `gl_compatibility`, 1080×1920 `canvas_items` + `expand`
   (a Camera2D centres the design area on any aspect). Physics 60 Hz, gravity 1600, default damping 0.
 * Boot splash = Wrong Button Studio logo (`assets/processed/ui/splash_wrong_button.png`, from the original `Studio_Logo.png` at the root,
   which is excluded from the APK), not the Godot one; guarded by `test_project_and_export`. Package `com.wrongbutton.flushroyale`.
-* `tests/run_tests.tscn`: ~700 checks, all pass (PoC 1-2 criteria, every tier of every level can go down the drain, rising water vs
+* `tests/run_tests.tscn`: ~720 checks, all pass (PoC 1-2 criteria, every tier of every level can go down the drain, rising water vs
   obstruction, natural clear by merging, big plugs survive one flush / repeated flushes sacrifice, sacrifice drains water, royal
   unlock/arm/trigger + overflow immunity, title + dev mode, splash, localisation, PoC 4 cards: once, after the cascade, tap/timeout,
   reveal on completion, card torn into the drain before the level transition).
@@ -92,6 +101,7 @@ game/objects/flush_object.gd  RigidBody2D tier object: data shapes, sample point
 game/throw/launcher.gd  slingshot input (touch == mouse), preview, launch, cooldown
 game/fx/fx.gd · game/ui/hud.gd   floating text/pops/droplets · score, next, FLUSH button, water gauge, warnings, game over, DEV button
 game/ui/title.gd        title screen (main scene): key art, bouncing logo, objects spiralling into the toilet, PLAY/CONTINUE, logo 5x = DEV
+game/fx/shake_hand.gd   TOILET SHAKE bonus: the cut-out hand (stop-motion), velocity jolts on every object, unplug kicks, camera shake
 game/ui/showcase.gd     PoC 4 presentation card (intro / grand reveal / flushed into the drain), world space, real time
 game/debug/dev_panel.gd DEV MODE cheat panel (English only)
 data/config.json        EVERY tuning value (throw, tiers size curve, merge/triple, chain, meter, royal, water, flush, drain, overflow, score)
@@ -140,6 +150,16 @@ tests/                  run_tests (acceptance), drain_probe (per-tier flush trac
   touches either (or already rests within `triple_pad`) joins → TRIPLE. Then merge at the mass-weighted centre with `momentum_kept`
   of the momentum; results grow from `grow_from` (no overlap explosion); a triple places its two results apart along the group's axis.
   Max tier never merges. Creating the max tier calls `start_royal_flush()`.
+* **Touch scan (PoC 4.1):** contact signals miss resting contacts in a crowd; every `merge.scan_interval` s matching non-busy pairs within
+  `reach()` range are shape-queried (`FlushObject.touches`, margin `touch_pad`) and handed to `try_merge`. Guarded by
+  `test_resting_matches_merge` (a pair that touched while busy must merge once free; crowded bowls leave no touching matches).
+* **TOILET SHAKE** (`shake` config, `ShakeHand`): `Game.add_shake` from `_score_merge` (not chain-multiplied), `request_shake` (PLAY only,
+  one at a time). Phases REACH → GRAB → SHAKE → LIFT. In SHAKE, on every beat (2·`freq`/s, alternating direction) each free object
+  gets `v = v·keep + jolt` (`kick_x` sideways ± `jitter` and a random share, up to `kick_y` up; `keep` stops it accumulating
+  into a launch), random spin; objects below `throat_y − unplug_above` get `unplug_speed` upward. A smooth oscillating force did
+  NOT work (stroke a/ω² is a few px and water drag eats it). `test_toilet_shake`: earned after ⌈1/per_merge⌉ merges, every object
+  moves ≥ 60 px (typically 100-300), nothing leaves the bowl, nothing is lost, a wedged tier-8 plug is lifted. Visual QA
+  `tools/dev/shots_shake.tscn`. Bot probe uses it when the water rises.
 * **Earned flush / chain:** `Game.add_meter` (per_merge + tier_bonus·(t−2)) × chain_mult (+ triple_bonus); chain uses SIMULATION time.
 * **Royal flush unlock:** creating the max tier → `State.ROYAL_READY` (water `frozen`, overflow ignored, launcher off; merges still
   run). When no merge happened for `royal.settle` s, `royal_armed` → the grand-reveal card (`Showcase.reveal`) + the FLUSH button
@@ -174,7 +194,7 @@ tests/                  run_tests (acceptance), drain_probe (per-tier flush trac
 * **Rules for new text:** show player text ONLY through `Loc.t("...")` with a string literal; translate a FORMAT and fill it afterwards
   (`Loc.t("CHAIN x%d") % n`, `Loc.t("NEW: %s!") % Loc.t(name).to_upper()`); never glue translated pieces together. Level and object
   names live in `data/levels.json` and are shown via `Loc.t(name)`. After adding text run `python3 tools/i18n/extract_strings.py`
-  and commit `data/i18n/en.json` (88 strings now; the extractor also takes tier `intro`/`reveal`). `test_localisation` fails on a missing key or on a raw literal at a display call
+  and commit `data/i18n/en.json` (90 strings now; the extractor also takes tier `intro`/`reveal`). `test_localisation` fails on a missing key or on a raw literal at a display call
   (`_text(`, `fx.text(`, `banner(`, `.text = `).
 * **New language:** copy `en.json` to `<code>.json` (pl, de, ...) and translate the values; keep `%d %s %.1f` (same count and order).
   The extractor reports untranslated keys and placeholder mismatches (`--list`). No translations ship yet (owner: PoC 3).
@@ -188,7 +208,7 @@ godot --headless --path . --fixed-fps 60 tests/run_tests.tscn                   
 godot --headless --path . --fixed-fps 60 tests/drain_probe.tscn -- --level=1 --tiers=1,4,9 [--x=580]   # flush trace per tier
 godot --headless --path . --fixed-fps 60 tests/bot_probe.tscn -- --games=2 --cap=900 --start=0 --policy=conservative|aggressive|flusher|holdout
 xvfb-run -a -s "-screen 0 1280x1024x24" godot --path . --rendering-driver opengl3 --resolution 540x960 tools/dev/shots.tscn   # screenshots -> tools/dev/out
-                                                 # (also shots_ui.tscn, shots_cards.tscn = PoC 4 cards)
+                                                 # (also shots_ui.tscn, shots_cards.tscn = PoC 4 cards, shots_shake.tscn = TOILET SHAKE)
 godot --path .                                   # play (mouse = touch). Keys: F/Space flush, R retry level, F1 collision debug;
                                                  # debug builds: 1-9 drop tier at mouse, C +1 flush charge, L next level
 ```
@@ -209,6 +229,8 @@ Re-run the bot probe after ANY tuning change. Android: `tools/ci/setup_godot.sh 
   may approve Layer spend itself up to 20 CU per task; estimate first. `build_assets.py` assigns blobs to grid cells by their centre. Model `gpt-image-2.5-flare`, medium, `batch_size` 1, always
   `estimate_forge_price` first with identical arguments (the RockRocketLaser lesson: batch/size are top-level args).
 * Layer is not used for water, particles, VFX or animation frames (procedural in Godot). Audio: Sonilo since PoC 3 (see above).
+* PoC 4.1: TOILET SHAKE hand sheet (open + gripping, `hand_sheet_raw.png` → `ui/hand_open.png`, `ui/hand_grip.png` via
+  `build_assets.py ui`), 2.55 CU; total all PoCs 46.8 CU.
 * PoC 3.1: game logo (`ui/game_logo.png`, 2.55 CU, high quality for the lettering: it came out lowercase "flush royale", kept) and
   title key art (`ui/title_bg.jpg`, 2.16 CU). `build_assets.py ui()` also builds the boot splash from `Studio_Logo.png`.
   Godot gotcha: never `load()` a texture inside `_draw()` - it is freed before rendering (white screen); keep it in a member.
@@ -228,5 +250,5 @@ constants. Keep it small: no premature abstractions, one script per system.
 * Squeeze-through squash is visual (sprite in world x); collision keeps its shape while it ignores the drain walls.
 
 ## 9. Intentionally out of scope
-Settings menu, achievements, ads, store, background music, power-ups, dialogue system / cutscenes / story framework (PoC 4 cards
+Settings menu, achievements, ads, store, background music, more power-ups (TOILET SHAKE is the first bonus), dialogue system / cutscenes / story framework (PoC 4 cards
 are the whole "story"), more than 9 tiers, soft bodies, real fluid simulation.

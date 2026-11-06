@@ -145,6 +145,14 @@ def ui():
     bg = os.path.join(SRC, "title_bg_raw.png")
     if os.path.exists(bg):
         Image.open(bg).convert("RGB").resize((1080, 1920), Image.LANCZOS).save(os.path.join(d, "title_bg.jpg"), quality=88)
+    hands = os.path.join(SRC, "hand_sheet_raw.png")     # TOILET SHAKE hand: left half open, right half gripping
+    if os.path.exists(hands):
+        sheet = key_magenta(Image.open(hands))
+        w2 = sheet.width // 2
+        for name, box in (("hand_open", (0, 0, w2, sheet.height)), ("hand_grip", (w2, 0, sheet.width, sheet.height))):
+            img = trim(sheet.crop(box), pad=2)
+            img.save(os.path.join(d, name + ".png"))
+            print(name, img.size)
     studio = os.path.join(G.ROOT, "Studio_Logo.png")
     if os.path.exists(studio):
         art = Image.open(studio).convert("RGBA")
@@ -158,7 +166,11 @@ def ui():
 
 
 if __name__ == "__main__":
+    import sys
     os.makedirs(OUT, exist_ok=True)
+    if sys.argv[1:] == ["ui"]:          # only the UI images (fast, leaves the level art untouched)
+        ui()
+        sys.exit(0)
     backgrounds()
     objects()
     ui()

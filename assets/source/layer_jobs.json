@@ -1,6 +1,6 @@
 {
  "_doc": "Every Layer generation used by the game (provenance + cost). Images: gpt-image-2.5-flare, quality medium, batch_size 1, priced with estimate_forge_price before running. Workspace 2f56243b-eef9-40c6-a060-8e7c186b0d35, Layer session a51c029f-36c1-4c75-bb35-bc8739852024. PoC 3 audio: Sonilo SFX / Sonilo Music 1.1 (owner permission).",
- "total_cost_creative_units": 44.236,
+ "total_cost_creative_units": 46.786,
  "jobs": [
   {
    "job_id": "bowl_background",
@@ -415,6 +415,23 @@
    "local_source": "assets/source/title_bg_raw.png",
    "runtime": "assets/processed/ui/title_bg.jpg",
    "prompt_summary": "Portrait title key art: royal blue/gold bathroom, crowned toilet with a whirlpool, objects from all locations spiralling, calm top third for the logo."
+  },
+  {
+   "job_id": "shake_hand",
+   "poc": "4.1",
+   "inference_id": "675542ce-5ad6-4394-afcc-f8d0a35dda23",
+   "output_file_id": "02969e3c-9bb7-42e1-9684-4fe25f9d8e40",
+   "size": "1536x1024",
+   "cost_creative_units": 2.55,
+   "model": "gpt-image-2.5-flare",
+   "quality": "medium",
+   "batch_size": 1,
+   "local_source": "assets/source/hand_sheet_raw.png",
+   "outputs": [
+    "assets/processed/ui/hand_open.png",
+    "assets/processed/ui/hand_grip.png"
+   ],
+   "prompt": "Sprite sheet on flat magenta: the same giant right hand coming down from the top, hand-tinted Victorian engraving cut out of an old book (absurd British 1970s comedy collage animation), cross-hatching, pale skin, white lace cuff, navy sleeve, white paper cut-out border. LEFT: open hand pointing down about to grab. RIGHT: hand gripping an invisible horizontal bar."
   }
  ]
 }

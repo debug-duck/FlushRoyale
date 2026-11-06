@@ -5,6 +5,7 @@ extends CanvasLayer
 ## ROYAL FLUSH) and the end panels (level flushed / victory / flooded) with one button.
 
 signal flush_pressed
+signal shake_pressed
 signal restart_pressed
 signal dev_pressed
 
@@ -14,6 +15,10 @@ const GOLD := Color(1.0, 0.82, 0.3)
 var game: Node
 var root: Control
 var flush_button: Button
+var shake_button: Button
+var _shake_icon: Texture2D
+var _shake_flash_t := 9.0
+var _shake_flash_bad := false
 var restart_button: Button
 var dev_button: Button
 var font: Font
@@ -44,6 +49,15 @@ func _ready() -> void:
 	flush_button.button_down.connect(func(): flush_pressed.emit())
 	flush_button.draw.connect(_draw_flush_button)
 	root.add_child(flush_button)
+	shake_button = Button.new()
+	shake_button.flat = true
+	shake_button.focus_mode = Control.FOCUS_NONE
+	_place(shake_button, Vector2(0, 1), Rect2(150, -340, 190, 200))
+	shake_button.button_down.connect(func(): shake_pressed.emit())
+	shake_button.draw.connect(_draw_shake_button)
+	root.add_child(shake_button)
+	if ResourceLoader.exists("res://assets/processed/ui/hand_grip.png"):
+		_shake_icon = load("res://assets/processed/ui/hand_grip.png")
 	restart_button = Button.new()
 	restart_button.text = Loc.t("RESTART")
 	restart_button.focus_mode = Control.FOCUS_NONE
@@ -101,6 +115,11 @@ func banner_busy() -> bool:
 func reveal(tier: int) -> void:
 	_reveal[tier] = 0.0
 
+## Pulse the SHAKE button: a new shake earned (good) or a press without one (bad).
+func flash_shake(bad := false) -> void:
+	_shake_flash_t = 0.0
+	_shake_flash_bad = bad
+
 ## Pulse the FLUSH button: a new charge (good) or a press without charges (bad).
 func flash_flush(bad := false) -> void:
 	_flash_t = 0.0
@@ -127,6 +146,8 @@ func _process(dt: float) -> void:
 		_panel_t += dt
 	_banner_t += dt
 	_flash_t += dt
+	_shake_flash_t += dt
+	shake_button.queue_redraw()
 	for k in _reveal:
 		_reveal[k] += dt
 	root.queue_redraw()
@@ -351,3 +372,38 @@ func _draw_flush_button() -> void:
 	var w := font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 46).x
 	flush_button.draw_string_outline(font, c + Vector2(-w * 0.5, 16), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 46, 12, INK)
 	flush_button.draw_string(font, c + Vector2(-w * 0.5, 16), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 46, Color.WHITE)
+
+## SHAKE button (TOILET SHAKE bonus): the hand icon, its meter as a ring, a pip per stored shake; grey until earned.
+func _draw_shake_button() -> void:
+	if not game:
+		return
+	var c := Vector2(95, 88)
+	var r := 74.0
+	var ready: bool = game.can_shake()
+	var pulse := exp(-_shake_flash_t * 4.0) * sin(_shake_flash_t * 30.0) * 8.0 if _shake_flash_t < 1.0 else 0.0
+	var bad := _shake_flash_bad and _shake_flash_t < 0.6
+	shake_button.draw_circle(c + Vector2(0, 8), r, Color(INK, 0.45))
+	shake_button.draw_circle(c, r + 7 + pulse, Color(0.8, 0.1, 0.1) if bad else INK)
+	var inner := Color(0.98, 0.6, 0.2) if ready else Color(0.55, 0.58, 0.64)
+	if ready:
+		inner = inner.lerp(Color(1, 0.85, 0.5), 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.008))
+	shake_button.draw_circle(c, r, inner)
+	if _shake_icon:
+		var h := r * 1.25
+		var sz := Vector2(_shake_icon.get_width() * h / _shake_icon.get_height(), h)
+		var wob := sin(Time.get_ticks_msec() * 0.03) * 0.12 if ready else 0.0
+		shake_button.draw_set_transform(c + Vector2(0, -6), wob, Vector2.ONE)
+		shake_button.draw_texture_rect(_shake_icon, Rect2(-sz * 0.5, sz), false, Color.WHITE if ready else Color(1, 1, 1, 0.45))
+		shake_button.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	shake_button.draw_arc(c, r - 3, 0, TAU, 40, Color(INK, 0.25), 8.0)
+	if game.shake_meter > 0.0:
+		shake_button.draw_arc(c, r - 3, -PI * 0.5, -PI * 0.5 + TAU * minf(game.shake_meter, 1.0), 40, Color(1.0, 0.85, 0.3), 8.0)
+	var maxc: int = Cfg.c.shake.max_charges
+	for i in maxc:
+		var p := c + Vector2((i - (maxc - 1) * 0.5) * 34.0, -r - 16.0)
+		shake_button.draw_circle(p, 13.0, INK)
+		shake_button.draw_circle(p, 9.0, Color(1.0, 0.7, 0.2) if i < game.shake_charges else Color(0.35, 0.38, 0.45))
+	var label := Loc.t("SHAKE!")
+	var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 34).x
+	shake_button.draw_string_outline(font, c + Vector2(-w * 0.5, r + 2), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, 10, INK)
+	shake_button.draw_string(font, c + Vector2(-w * 0.5, r + 2), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color.WHITE)

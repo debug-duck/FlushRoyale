@@ -86,6 +86,8 @@ func play(seed_i: int) -> void:
 					want = game.over_t > 0.0
 			if game.charges > 0 and want and w.can_flush():
 				game.request_flush()
+			if game.can_shake() and w.rise_rate() > 0.0:    # the TOILET SHAKE bonus: used against a clog
+				game.request_shake()
 			if w.rise_rate() > 0.0:
 				danger_t += 1.0 / 60.0
 			max_fill = maxf(max_fill, w.fill_frac())
@@ -100,10 +102,10 @@ func play(seed_i: int) -> void:
 		t += 1.0 / 60.0
 		level_t += 1.0 / 60.0
 		if game.state == Game.State.LEVEL_DONE or game.state == Game.State.VICTORY or game.state == Game.State.GAME_OVER:
-			log.append("%s %s %.0fs top=%d (merges %d, triples %d, chain %d, flushes %d, lost %s, clears %d, rising %.0f%%, maxfill %.2f, score %d)" % [
+			log.append("%s %s %.0fs top=%d (merges %d, triples %d, chain %d, flushes %d, lost %s, clears %d, shakes %d, scan %d, rising %.0f%%, maxfill %.2f, score %d)" % [
 				Cfg.level_id(), {Game.State.LEVEL_DONE: "ROYAL", Game.State.VICTORY: "ROYAL+WIN", Game.State.GAME_OVER: "FLOODED"}[game.state],
 				level_t, _top(), game.stats.merges, game.stats.triples, game.stats.best_chain, game.stats.flushes, game.stats.lost,
-				game.stats.clears, 100.0 * danger_t / maxf(level_t, 1.0), max_fill, game.score])
+				game.stats.clears, int(game.stats.get("shakes", 0)), int(game.stats.get("scan_merges", 0)), 100.0 * danger_t / maxf(level_t, 1.0), max_fill, game.score])
 			danger_t = 0.0
 			max_fill = 0.0
 			if game.state != Game.State.LEVEL_DONE:

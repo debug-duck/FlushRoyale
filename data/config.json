@@ -33,7 +33,10 @@
     "grow_time": 0.16,
     "_triple_doc": "TRIPLE MERGE: a pair waits triple_window s before merging; a third matching object that touches either (or rests within triple_pad px) joins and the three become TWO next-tier objects.",
     "triple_window": 0.14,
-    "triple_pad": 16
+    "triple_pad": 16,
+    "_scan_doc": "Backup for the contact signal (it misses resting contacts in a crowded bowl): every scan_interval s matching pairs are shape-tested with touch_pad px of margin and merged.",
+    "scan_interval": 0.12,
+    "touch_pad": 4
   },
   "chain": {
     "_doc": "Merges less than `window` s apart build a chain; multiplier = min(max_mult, 1 + step*(chain-1)) on merge points AND flush-meter gain (banked cascades).",
@@ -48,6 +51,31 @@
     "triple_bonus": 0.25,
     "start_charges": 1,
     "max_charges": 3
+  },
+  "shake": {
+    "_doc": "TOILET SHAKE bonus (game/fx/shake_hand.gd). Earned by merges: per_merge (+ triple_bonus) fills the shake meter, full = 1 shake (max max_charges). A cut-out hand reaches down (reach_time), grabs the rim (grab_pause) and shakes for `duration` s at `freq` Hz: on every beat (2 x freq per s, alternating left/right) every free object gets a velocity jolt (v = v * keep + jolt: never accumulates into a launch): kick_x sideways (x 1 +- jitter, plus a random share) and up to kick_y upward (they rub against each other -> new contacts -> merges), random spin; on each beat anything lower than throat_y - unplug_above (the funnel) is kicked up at unplug_speed (unclogs). The hand grips the right rim (inner rim x + grip_dx). Camera shake/tilt and water slosh are visual. anim_fps = stop-motion steps of the hand.",
+    "per_merge": 0.06,
+    "triple_bonus": 0.06,
+    "start_charges": 0,
+    "max_charges": 2,
+    "reach_time": 0.5,
+    "grab_pause": 0.18,
+    "duration": 1.6,
+    "lift_time": 0.4,
+    "freq": 3.5,
+    "kick_x": 300,
+    "kick_y": 260,
+    "keep": 0.3,
+    "jitter": 0.4,
+    "spin": 3.0,
+    "unplug_speed": 700,
+    "unplug_above": 300,
+    "grip_dx": 4,
+    "slosh": 500,
+    "camera_shake": 24,
+    "camera_tilt": 0.03,
+    "hand_height": 620,
+    "anim_fps": 12
   },
   "showcase": {
     "_doc": "PoC 4 presentation cards (game/ui/showcase.gd). INTRO: a tier with an `intro` line in levels.json, first discovery ever (saved): queued until the cascade is over (no pending merge, `chain.window` s since the last merge, not aiming, not flushing), pauses the game for `intro_time` real s (tap = dismiss). REVEAL: the level's last tier, every completion, when the royal flush arms: `drumroll` s silhouette, then the object; stays until ROYAL FLUSH. Then it shakes for royal.delay, breaks into pieces (`break_stagger` s apart) that spiral into the drain in `suck_time` s.",

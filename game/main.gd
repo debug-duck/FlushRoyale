@@ -26,6 +26,8 @@ var launcher: Launcher
 var fx: Fx
 var hud: Hud
 var showcase: Showcase
+var shaker: ShakeHand
+var camera: Camera2D
 var objects_root: Node2D
 var objects: Array[FlushObject] = []
 var state := State.PLAY
@@ -37,6 +39,8 @@ var over_t := 0.0
 var game_over := false              # kept for HUD/tests: true in GAME_OVER
 var charges := 0
 var meter := 0.0
+var shake_charges := 0             # TOILET SHAKE bonus (earned by merges)
+var shake_meter := 0.0
 var chain := 0
 var chain_mult := 1.0
 var discovered := {}                # tier -> true (this level, this run)
@@ -55,6 +59,7 @@ var _last_merge_t := -99.0
 var _pending: Array = []            # [{objs: [a, b(, c)], t: time_left}]
 var _textures := {}
 var _alarm_t := 0.0
+var _scan_t := 0.0
 var _save := {}
 var _intro_queue: Array[int] = []   # discovered tiers waiting for their intro card (shown when the cascade is over)
 
@@ -72,6 +77,7 @@ func _ready() -> void:
 	cam.position = Vector2(540, 960)
 	add_child(cam)
 	cam.make_current()
+	camera = cam
 	var backdrop := Backdrop.new()
 	backdrop.z_index = -10
 	add_child(backdrop)
@@ -95,6 +101,10 @@ func _ready() -> void:
 	fx = Fx.new()
 	fx.z_index = 8
 	add_child(fx)
+	shaker = ShakeHand.new()
+	shaker.name = "ShakeHand"
+	shaker.game = self
+	add_child(shaker)
 	showcase = Showcase.new()
 	showcase.name = "Showcase"
 	showcase.game = self
@@ -104,6 +114,7 @@ func _ready() -> void:
 	hud.game = self
 	add_child(hud)
 	hud.flush_pressed.connect(request_flush)
+	hud.shake_pressed.connect(request_shake)
 	hud.restart_pressed.connect(_on_panel_button)
 	hud.dev_pressed.connect(open_dev_panel)
 	water.squeezed.connect(_on_squeezed)
@@ -117,6 +128,7 @@ func _ready() -> void:
 	_save = _load_save()
 	best = int(_save.get("best", 0))
 	charges = int(Cfg.c.meter.start_charges)
+	shake_charges = int(Cfg.c.shake.start_charges)
 	for t in range(1, Cfg.spawn_weights().size() + 1):
 		discovered[t] = true
 	next_tier = roll_tier()
@@ -198,6 +210,38 @@ func _update_pending(dt: float) -> void:
 				alive.append(third)
 		_merge(alive)
 
+## Backup for the contact signal, which only reports NEW contacts and at most `max_contacts_reported` points per body: in a
+## crowded bowl two matching objects could come to rest against each other unreported (the megaphone bug). Every
+## `merge.scan_interval` s, matching pairs within reach are tested with a real shape query (`merge.touch_pad` px).
+func _scan_touching(dt: float) -> void:
+	if not (state == State.PLAY or state == State.ROYAL_READY):
+		return
+	_scan_t -= dt
+	if _scan_t > 0.0:
+		return
+	_scan_t = float(Cfg.c.merge.scan_interval)
+	var pad: float = Cfg.c.merge.touch_pad
+	var by_tier := {}
+	for o in objects:
+		if o.held or o.passing or o.merging or o.tier >= Cfg.max_tier():
+			continue
+		if not by_tier.has(o.tier):
+			by_tier[o.tier] = []
+		by_tier[o.tier].append(o)
+	for t in by_tier:
+		var g: Array = by_tier[t]
+		for i in g.size():
+			for j in range(i + 1, g.size()):
+				var a: FlushObject = g[i]
+				var b: FlushObject = g[j]
+				if a.merging or b.merging:
+					continue
+				if a.global_position.distance_to(b.global_position) > a.reach() + b.reach() + pad:
+					continue
+				if a.touches(b, pad):
+					stats.scan_merges = int(stats.get("scan_merges", 0)) + 1
+					try_merge(a, b)
+
 ## A matching object already resting against the pair (contact signals only fire on NEW contacts).
 func _resting_neighbour(pair: Array) -> FlushObject:
 	var pad: float = Cfg.c.merge.triple_pad
@@ -271,6 +315,7 @@ func _score_merge(tier: int, pos: Vector2, r: float, triple: bool) -> void:
 		gain += float(m.triple_bonus)
 		stats.triples += 1
 	add_meter(gain)
+	add_shake(float(Cfg.c.shake.per_merge) + (float(Cfg.c.shake.triple_bonus) if triple else 0.0))
 	fx.pop(pos, r, Color(Cfg.tier(tier).color))
 	fx.text(pos + Vector2(0, -r - 20), Loc.t("+%d") % pts, Color(1, 1, 0.8), 46)
 	if triple or chain >= 2:
@@ -303,6 +348,34 @@ func add_meter(gain: float) -> void:
 		else:
 			meter = 1.0
 			break
+
+## Merges also fill the TOILET SHAKE meter; a full meter is one shake (capped).
+func add_shake(gain: float) -> void:
+	var maxc: int = Cfg.c.shake.max_charges
+	shake_meter += gain
+	while shake_meter >= 1.0:
+		if shake_charges < maxc:
+			shake_charges += 1
+			shake_meter -= 1.0
+			hud.flash_shake()
+			Sfx.play("boing", 0.8, -4.0)
+		else:
+			shake_meter = 1.0
+			break
+
+func can_shake() -> bool:
+	return state == State.PLAY and shake_charges > 0 and not shaker.active()
+
+## SHAKE button: the hand comes down and shakes the toilet. Returns true when it started.
+func request_shake() -> bool:
+	if not can_shake():
+		if state == State.PLAY and shake_charges == 0:
+			hud.flash_shake(true)
+		return false
+	shake_charges -= 1
+	stats.shakes = int(stats.get("shakes", 0)) + 1
+	shaker.start()
+	return true
 
 func remove_object(o: FlushObject) -> void:
 	objects.erase(o)
@@ -444,6 +517,7 @@ func _physics_process(dt: float) -> void:
 		elif p.y > 2300.0 or p.x < -400.0 or p.x > 1480.0:
 			remove_object(o)        # safety net (never expected)
 	_update_pending(dt)
+	_scan_touching(dt)
 	if state == State.ROYAL:
 		_update_royal(dt)
 		return
@@ -606,6 +680,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				request_flush()
 			KEY_R:
 				restart()
+			KEY_S:
+				request_shake()
 			KEY_F1:
 				bowl.debug_draw = not bowl.debug_draw
 				bowl.queue_redraw()

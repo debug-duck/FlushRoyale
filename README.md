@@ -24,6 +24,9 @@ Three ridiculous locations, nine objects each - what the hell comes after a radi
 * **EMERGENCY FLUSH (earned):** merges fill the ring around the FLUSH button; a full ring = one charge (up to 3). The whirlpool drains
   a lot of water and shakes everything up, but whatever goes down is **LOST** (no points). Big objects survive one flush - panic
   flushing again and again will sacrifice them (each sacrifice drains extra water).
+* **TOILET SHAKE (bonus):** merges also fill the ring around the SHAKE button (bottom left). Press it and a giant hand comes down,
+  grabs the toilet and shakes it: everything tumbles and hops, stuck objects come loose (and finally touch their twins), a clogged
+  drain gets unclogged. Up to 2 stored. Key `S`.
 * **ROYAL FLUSH:** create the location's ninth object: the water stops, the cascade finishes, the button turns gold - press it and
   everything goes down at ×3 points. Then the next location.
 
@@ -46,7 +49,7 @@ godot --path . --import
 godot --path .                      # mouse works like touch
 ```
 **DEV MODE:** tap the logo on the title screen 5 times; a DEV button appears in the game (god mode, level jumps, choose/drop
-objects, royal flush now, water controls, stats, show / replay the intro cards). Keys: `F`/`Space` flush · `R` retry level · `F1` collision debug · debug builds: `1`-`9` drop an object at the mouse,
+objects, royal flush now, +1 shake / shake now, water controls, stats, show / replay the intro cards). Keys: `F`/`Space` flush · `S` toilet shake · `R` retry level · `F1` collision debug · debug builds: `1`-`9` drop an object at the mouse,
 `C` +1 flush charge, `L` next level.
 Android: CI builds a debug APK (artifact `flush-royale-debug-apk`).
 
@@ -58,7 +61,7 @@ exists, otherwise English; on PC it is always English. Details: `CLAUDE.md` §4d
 
 ## Tests
 ```bash
-godot --headless --path . --fixed-fps 60 tests/run_tests.tscn     # ~700 checks
+godot --headless --path . --fixed-fps 60 tests/run_tests.tscn     # ~720 checks
 godot --headless --path . --fixed-fps 60 tests/bot_probe.tscn -- --games=3 --cap=1200 --policy=conservative
 ```
 All tuning lives in `data/config.json`, `data/levels.json`, `data/bowl.json`. Architecture and tuning notes: [`CLAUDE.md`](CLAUDE.md).

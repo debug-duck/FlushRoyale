@@ -234,6 +234,10 @@ func _splash(x: float, power: float) -> void:
 			_colv[k] += p * (1.0 - absf(j) * 0.35)
 	splashed.emit(Vector2(x, surface_level()), p)
 
+## A push on the surface at x (TOILET SHAKE sloshing).
+func disturb(x: float, power: float) -> void:
+	_splash(x, power)
+
 func _update_blockage() -> void:
 	var space := get_world_2d().direct_space_state
 	var n: int = dr.samples

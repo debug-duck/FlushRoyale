@@ -231,6 +231,29 @@ func _apply_grow() -> void:
 		_shape_nodes[i].scale = Vector2.ONE * _grow
 		_shape_nodes[i].position = _shape_pos[i] * _grow
 
+## Farthest collision point from the centre (broad phase for Game's touch scan).
+func reach() -> float:
+	var r := 0.0
+	for p in hull:
+		r = maxf(r, p.length())
+	return r * _grow
+
+## True if any of our collision shapes is within `pad` px of body `b` (a real shape query: works for resting contacts that
+## the contact signal never reported).
+func touches(b: FlushObject, pad: float) -> bool:
+	var space := get_world_2d().direct_space_state
+	var q := PhysicsShapeQueryParameters2D.new()
+	q.collision_mask = Cfg.LAYER_OBJECTS
+	q.margin = pad
+	q.exclude = [get_rid()]
+	for cs in _shape_nodes:
+		q.shape = cs.shape
+		q.transform = cs.global_transform
+		for hit in space.intersect_shape(q, 12):
+			if hit.collider == b:
+				return true
+	return false
+
 func _on_body_entered(b: Node) -> void:
 	if b is FlushObject and game and game.has_method("try_merge"):
 		game.try_merge(self, b)

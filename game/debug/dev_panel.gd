@@ -34,6 +34,7 @@ func _ready() -> void:
 		[["god", "", Color("3fa66b"), _toggle_god], ["", "RESTART LEVEL", Color("7a5fc0"), func(): _jump(Cfg.level)]],
 		[["", "<<  PREV LEVEL", Color("7a5fc0"), func(): _jump(Cfg.level - 1)], ["", "NEXT LEVEL  >>", Color("e8642c"), func(): _jump(Cfg.level + 1)]],
 		[["", "+1 FLUSH CHARGE", Color("2c7ac0"), func(): game.add_meter(1.0)], ["", "ROYAL FLUSH NOW", Color("d4a017"), _royal_now]],
+		[["", "+1 TOILET SHAKE", Color("b0632c"), func(): game.add_shake(1.0)], ["", "SHAKE NOW", Color("b0632c"), _shake_now]],
 		[["", "DRAIN WATER", Color("2c9ac0"), _drain], ["", "RAISE WATER", Color("c0392b"), _raise]],
 		[["freeze", "", Color("2c7ac0"), _toggle_freeze], ["", "CLEAR BOWL", Color("c0392b"), _clear_bowl]],
 		[["slow", "", Color("2c7ac0"), _toggle_slow], ["stats", "", Color("2c7ac0"), _toggle_stats]],
@@ -176,6 +177,12 @@ func _show_intro() -> void:
 func _replay_intros() -> void:
 	game.dev_reset_intros()
 	close()
+
+func _shake_now() -> void:
+	close()
+	if game.shake_charges == 0:
+		game.add_shake(1.0)
+	game.request_shake()
 
 func _royal_now() -> void:
 	close()

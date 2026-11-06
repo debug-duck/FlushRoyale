@@ -25,6 +25,8 @@ func _ready() -> void:
 	await test_overflow_game_over()
 	await test_flush_charges()
 	await test_triple_merge()
+	await test_resting_matches_merge()
+	await test_toilet_shake()
 	await test_chain()
 	await test_royal_flush_and_levels()
 	await test_rising_water()
@@ -472,6 +474,89 @@ func test_triple_merge() -> void:
 	b.linear_velocity = Vector2(0, 400)
 	await seconds(1.5)
 	ok(game.stats.triples == 0 and count_tier(3) == 1, "a pair is still one merge")
+
+## The megaphone bug: in a crowded bowl matching objects came to rest against each other without a contact report (the signal
+## only reports NEW contacts, max_contacts_reported per body). The touch scan must merge every resting matching pair.
+func test_resting_matches_merge() -> void:
+	await new_game(false, 1)
+	var a := game.make_object(5, Vector2(470, 1000))
+	var b := game.make_object(5, Vector2(610, 1000))
+	a.merging = true          # busy when they touch: the contact signal is used up
+	await seconds(2.0)
+	ok(game.objects.has(a) and game.objects.has(b), "megaphones are not merged while one is busy")
+	a.merging = false
+	await seconds(0.6)
+	ok(not game.objects.has(a) and not game.objects.has(b), "resting megaphones merge as soon as they can (touch scan)")
+	var leftovers := 0
+	for run in 3:
+		await new_game(false, 1)
+		seed(77 + run)
+		for i in 36:
+			game.make_object(1 + randi() % 6, Vector2(randf_range(250, 830), randf_range(500, 900)))
+			await step(4)
+		await seconds(6.0)
+		var objs := game.objects.filter(func(o): return not o.merging)
+		for i in objs.size():
+			for j in range(i + 1, objs.size()):
+				if objs[i].tier == objs[j].tier and objs[i].tier < Cfg.max_tier() and objs[i].touches(objs[j], 1.0):
+					leftovers += 1
+		print("  crowded bowl %d: %d objects, scan merges %d" % [run, game.objects.size(), int(game.stats.get("scan_merges", 0))])
+	ok(leftovers == 0, "no matching pair stays resting in contact in a crowded bowl (%d left)" % leftovers)
+
+## TOILET SHAKE bonus: earned by merges; the hand shakes EVERY object (also wedged / resting ones), nothing leaves the bowl,
+## and a plug in the drain is knocked loose.
+func test_toilet_shake() -> void:
+	await new_game(false, 0, true)
+	ok(game.shake_charges == 0 and not game.request_shake(), "no shake before it is earned")
+	var need := int(ceil(1.0 / float(Cfg.c.shake.per_merge)))
+	for i in need - 1:
+		game._score_merge(2, Vector2(540, 1000), 30.0, false)
+	ok(game.shake_charges == 0, "not yet after %d merges" % (need - 1))
+	game._score_merge(2, Vector2(540, 1000), 30.0, false)
+	ok(game.shake_charges == 1, "a shake is earned after %d merges" % need)
+	# a crowded bowl, settled: every object must get shaken
+	await new_game(false, 1)
+	seed(5)
+	for i in 26:
+		game.make_object(1 + randi() % 6, Vector2(randf_range(250, 830), randf_range(520, 900)))
+		await step(4)
+	await seconds(5.0)
+	var before := game.objects.duplicate()
+	game.add_shake(1.0)
+	ok(game.request_shake() and game.shaker.active(), "the SHAKE button starts the hand")
+	ok(not game.request_shake(), "one shake at a time")
+	var tot := float(Cfg.c.shake.reach_time) + float(Cfg.c.shake.grab_pause) + float(Cfg.c.shake.duration) + float(Cfg.c.shake.lift_time)
+	var out := 0
+	for i in int((tot + 0.2) * 60.0):
+		await get_tree().physics_frame
+		for o in game.objects:
+			if o.global_position.y < float(Cfg.bowl.rim_slope_top_y) - 300.0 or o.global_position.x < 0.0 or o.global_position.x > 1080.0:
+				out += 1
+	ok(not game.shaker.active(), "the shake ends (%.1f s)" % tot)
+	near(game.camera.offset.length() + absf(game.camera.rotation), 0.0, 0.001, "the camera is back in place")
+	var least := 9999.0
+	var n := 0
+	for o in before:
+		if game.shaker.moved.has(o) and is_instance_valid(o) and game.objects.has(o):
+			least = minf(least, float(game.shaker.moved[o]))
+			n += 1
+	print("  shake: %d objects tracked, least moved %.0f px, merges %d" % [n, least, game.stats.merges])
+	ok(n >= 5 and least >= 60.0, "every object gets a good shake (least %.0f px)" % least)
+	ok(out == 0, "nothing is thrown out of the bowl (%d frames out)" % out)
+	ok(game.stats.lost.is_empty(), "the shake loses nothing down the drain")
+	# a wedged plug is knocked loose
+	await new_game(false, 0)
+	var monster := game.make_object(8, Vector2(540, 1150))
+	await seconds(4.0)
+	ok(game.water.plug == monster, "the debt monster plugs the drain")
+	var y0 := monster.global_position.y
+	var top := y0
+	game.add_shake(1.0)
+	game.request_shake()
+	for i in int((tot + 0.2) * 60.0):
+		await get_tree().physics_frame
+		top = minf(top, monster.global_position.y)
+	ok(y0 - top >= 120.0, "the shake knocks the plug loose (lifted %.0f px)" % (y0 - top))
 
 func test_chain() -> void:
 	await new_game()

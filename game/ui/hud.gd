@@ -42,7 +42,7 @@ func _ready() -> void:
 	flush_button.draw.connect(_draw_flush_button)
 	root.add_child(flush_button)
 	restart_button = Button.new()
-	restart_button.text = "RESTART"
+	restart_button.text = Loc.t("RESTART")
 	restart_button.focus_mode = Control.FOCUS_NONE
 	restart_button.add_theme_font_size_override("font_size", 60)
 	restart_button.custom_minimum_size = Vector2(520, 150)
@@ -90,11 +90,11 @@ func show_panel(state: int) -> void:
 	restart_button.visible = true
 	match state:
 		Game.State.LEVEL_DONE:
-			restart_button.text = "NEXT LEVEL"
+			restart_button.text = Loc.t("NEXT LEVEL")
 		Game.State.VICTORY:
-			restart_button.text = "PLAY AGAIN"
+			restart_button.text = Loc.t("PLAY AGAIN")
 		_:
-			restart_button.text = "RETRY LEVEL"
+			restart_button.text = Loc.t("RETRY LEVEL")
 
 ## Compatibility with PoC 1 callers/tests.
 func show_game_over() -> void:
@@ -124,14 +124,14 @@ func _draw_hud() -> void:
 	var cx := vs.x * 0.5
 	# score + best, level title
 	_text(Vector2(40, 110), str(game.score), 92)
-	_text(Vector2(44, 168), "BEST %d" % game.best, 40, Color(1, 1, 1, 0.85))
-	_text(Vector2(cx, 62), "LEVEL %d/%d" % [Cfg.level + 1, Cfg.level_count()], 34, Color(1, 1, 1, 0.9), true, 12)
-	_text(Vector2(cx, 110), str(Cfg.level_def().name), 44, GOLD, true, 14)
+	_text(Vector2(44, 168), Loc.t("BEST %d") % game.best, 40, Color(1, 1, 1, 0.85))
+	_text(Vector2(cx, 62), Loc.t("LEVEL %d/%d") % [Cfg.level + 1, Cfg.level_count()], 34, Color(1, 1, 1, 0.9), true, 12)
+	_text(Vector2(cx, 110), Loc.t(Cfg.level_def().name), 44, GOLD, true, 14)
 	# next preview
 	var box := Rect2(vs.x - 230, 30, 190, 190)
 	root.draw_rect(box, Color(1, 1, 1, 0.75))
 	root.draw_rect(box, INK, false, 6.0)
-	_text(box.position + Vector2(95, 44), "NEXT", 36, Color(0.15, 0.2, 0.3), true, 0)
+	_text(box.position + Vector2(95, 44), Loc.t("NEXT"), 36, Color(0.15, 0.2, 0.3), true, 0)
 	_icon(game.next_tier, box.position + Vector2(95, 118), 112.0, true)
 	_draw_strip(vs)
 	_draw_gauge(vs, water)
@@ -140,9 +140,9 @@ func _draw_hud() -> void:
 		if game.over_t > 0.0:
 			var left: float = float(Cfg.c.overflow.grace_time) - game.over_t
 			var flash := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.02)
-			_text(Vector2(cx, vs.y * 0.37), "OVERFLOWING! %.1f" % maxf(left, 0.0), 80, Color(1, 0.3 + 0.4 * flash, 0.2), true)
+			_text(Vector2(cx, vs.y * 0.37), Loc.t("OVERFLOWING! %.1f") % maxf(left, 0.0), 80, Color(1, 0.3 + 0.4 * flash, 0.2), true)
 		elif water.blockage > 0.75:
-			_text(Vector2(cx, vs.y * 0.37), "CLOGGED!", 64, Color(1, 0.75, 0.3), true)
+			_text(Vector2(cx, vs.y * 0.37), Loc.t("CLOGGED!"), 64, Color(1, 0.75, 0.3), true)
 	# banner (not over an end panel)
 	if _banner_t < _banner_len and _panel_t < 0.0:
 		var a := clampf(minf(_banner_t * 4.0, (_banner_len - _banner_t) * 2.0), 0.0, 1.0)
@@ -151,7 +151,7 @@ func _draw_hud() -> void:
 			var size := int(150 * pop)
 			var wob := sin(_banner_t * 9.0) * 6.0
 			_text(Vector2(cx, vs.y * 0.33 + wob), _banner, size, Color(GOLD, a), true, 24)
-			_text(Vector2(cx, vs.y * 0.33 + 90), "EVERYTHING MUST GO!", 54, Color(1, 1, 1, a), true)
+			_text(Vector2(cx, vs.y * 0.33 + 90), Loc.t("EVERYTHING MUST GO!"), 54, Color(1, 1, 1, a), true)
 		else:
 			_text(Vector2(cx, vs.y * 0.33), _banner, int(70 * pop), Color(1, 1, 1, a), true, 18)
 	# end panels
@@ -161,20 +161,20 @@ func _draw_hud() -> void:
 		var y := vs.y * 0.5
 		match _panel_state:
 			Game.State.LEVEL_DONE:
-				_text(Vector2(cx, y - 320), str(Cfg.level_def().name), 64, GOLD, true)
-				_text(Vector2(cx, y - 150), "FLUSHED!", 140, Color(0.6, 0.9, 1.0), true)
-				_text(Vector2(cx, y - 40), "LEVEL SCORE %d" % (game.score - game.level_start_score), 60, Color.WHITE, true)
-				_text(Vector2(cx, y + 50), "TOTAL %d" % game.score, 50, Color(1, 1, 1, 0.85), true)
-				_text(Vector2(cx, y + 120), "NEXT: %s" % str(Cfg.levels[Cfg.level + 1].name), 44, GOLD, true)
+				_text(Vector2(cx, y - 320), Loc.t(Cfg.level_def().name), 64, GOLD, true)
+				_text(Vector2(cx, y - 150), Loc.t("FLUSHED!"), 140, Color(0.6, 0.9, 1.0), true)
+				_text(Vector2(cx, y - 40), Loc.t("LEVEL SCORE %d") % (game.score - game.level_start_score), 60, Color.WHITE, true)
+				_text(Vector2(cx, y + 50), Loc.t("TOTAL %d") % game.score, 50, Color(1, 1, 1, 0.85), true)
+				_text(Vector2(cx, y + 120), Loc.t("NEXT: %s") % Loc.t(Cfg.levels[Cfg.level + 1].name), 44, GOLD, true)
 			Game.State.VICTORY:
-				_text(Vector2(cx, y - 240), "ALL HAIL", 80, Color.WHITE, true)
-				_text(Vector2(cx, y - 120), "THE FLUSH KING!", 110, GOLD, true)
-				_text(Vector2(cx, y - 10), "SCORE %d" % game.score, 80, Color.WHITE, true)
-				_text(Vector2(cx, y + 80), "BEST %d" % game.best, 54, GOLD, true)
+				_text(Vector2(cx, y - 240), Loc.t("ALL HAIL"), 80, Color.WHITE, true)
+				_text(Vector2(cx, y - 120), Loc.t("THE FLUSH KING!"), 110, GOLD, true)
+				_text(Vector2(cx, y - 10), Loc.t("SCORE %d") % game.score, 80, Color.WHITE, true)
+				_text(Vector2(cx, y + 80), Loc.t("BEST %d") % game.best, 54, GOLD, true)
 			_:
-				_text(Vector2(cx, y - 220), "FLOODED!", 140, Color(0.6, 0.85, 1.0), true)
-				_text(Vector2(cx, y - 80), "SCORE %d" % game.score, 80, Color.WHITE, true)
-				_text(Vector2(cx, y + 10), "BEST %d" % game.best, 54, GOLD, true)
+				_text(Vector2(cx, y - 220), Loc.t("FLOODED!"), 140, Color(0.6, 0.85, 1.0), true)
+				_text(Vector2(cx, y - 80), Loc.t("SCORE %d") % game.score, 80, Color.WHITE, true)
+				_text(Vector2(cx, y + 10), Loc.t("BEST %d") % game.best, 54, GOLD, true)
 
 ## The level's objects in tier order. Unknown = dark silhouette + "?"; the last one is the royal goal (gold frame).
 func _draw_strip(vs: Vector2) -> void:
@@ -216,7 +216,7 @@ func _draw_gauge(vs: Vector2, water: Water) -> void:
 	var wc := Color(0.25, 0.6, 1.0).lerp(Color(1.0, 0.25, 0.2), clampf((f - 0.55) / 0.45, 0.0, 1.0))
 	root.draw_rect(Rect2(g.position.x, g.end.y - fh, g.size.x, fh), wc)
 	root.draw_line(Vector2(g.position.x - 14, g.position.y), Vector2(g.end.x + 14, g.position.y), Color(1, 0.2, 0.15), 6.0)
-	_text(Vector2(g.position.x + 35, g.end.y + 46), "WATER", 30, Color.WHITE, true)
+	_text(Vector2(g.position.x + 35, g.end.y + 46), Loc.t("WATER"), 30, Color.WHITE, true)
 
 ## FLUSH button: charge pips on top, the meter as a ring, grey when no charge is stored.
 func _draw_flush_button() -> void:
@@ -245,7 +245,7 @@ func _draw_flush_button() -> void:
 		var p := c + Vector2((i - (maxc - 1) * 0.5) * 46.0, -r - 22.0)
 		flush_button.draw_circle(p, 17.0, INK)
 		flush_button.draw_circle(p, 12.0, Color(0.3, 0.85, 1.0) if i < game.charges else Color(0.35, 0.38, 0.45))
-	var s := "FLUSH"
+	var s := Loc.t("FLUSH")
 	var w := font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 46).x
 	flush_button.draw_string_outline(font, c + Vector2(-w * 0.5, 16), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 46, 12, INK)
 	flush_button.draw_string(font, c + Vector2(-w * 0.5, 16), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 46, Color.WHITE)

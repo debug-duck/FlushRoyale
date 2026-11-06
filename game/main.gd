@@ -101,7 +101,7 @@ func _ready() -> void:
 		discovered[t] = true
 	next_tier = roll_tier()
 	spawn_held()
-	hud.banner("LEVEL %d: %s" % [Cfg.level + 1, Cfg.level_def().name], 2.2)
+	hud.banner(Loc.t("LEVEL %d: %s") % [Cfg.level + 1, Loc.t(Cfg.level_def().name)], 2.2)
 
 # ------------------------------------------------------------------ spawning
 
@@ -250,17 +250,17 @@ func _score_merge(tier: int, pos: Vector2, r: float, triple: bool) -> void:
 		stats.triples += 1
 	add_meter(gain)
 	fx.pop(pos, r, Color(Cfg.tier(tier).color))
-	fx.text(pos + Vector2(0, -r - 20), "+%d" % pts, Color(1, 1, 0.8), 46)
+	fx.text(pos + Vector2(0, -r - 20), Loc.t("+%d") % pts, Color(1, 1, 0.8), 46)
 	if triple:
-		fx.text(pos + Vector2(0, -r - 80), "TRIPLE MERGE!", Color(0.5, 1.0, 0.9), 62)
+		fx.text(pos + Vector2(0, -r - 80), Loc.t("TRIPLE MERGE!"), Color(0.5, 1.0, 0.9), 62)
 		Sfx.play("pop", 0.8)
 	elif chain >= 2:
-		fx.text(pos + Vector2(0, -r - 80), "CHAIN x%d" % chain, Color(1.0, 0.75, 0.3), 50 + mini(chain, 6) * 4)
+		fx.text(pos + Vector2(0, -r - 80), Loc.t("CHAIN x%d") % chain, Color(1.0, 0.75, 0.3), 50 + mini(chain, 6) * 4)
 	if not discovered.has(tier):
 		discovered[tier] = true
 		hud.reveal(tier)
 		if tier < Cfg.max_tier():
-			fx.text(pos + Vector2(0, -r - 140), "NEW: " + str(Cfg.tier(tier).name).to_upper() + "!", Color(1, 0.9, 0.4), 58)
+			fx.text(pos + Vector2(0, -r - 140), Loc.t("NEW: %s!") % Loc.t(Cfg.tier(tier).name).to_upper(), Color(1, 0.9, 0.4), 58)
 		_remember_seen(tier)
 	Sfx.play("pop", 1.25 - tier * 0.06)
 
@@ -316,7 +316,7 @@ func start_royal_flush() -> void:
 				o.merging = false
 	_pending.clear()
 	Engine.time_scale = float(Cfg.c.royal.slowmo)
-	hud.banner("ROYAL FLUSH!", 3.5, true)
+	hud.banner(Loc.t("ROYAL FLUSH!"), 3.5, true)
 	Sfx.play("flush", 0.7)
 
 func _update_royal(dt: float) -> void:
@@ -350,10 +350,10 @@ func _flushed(o: FlushObject) -> void:
 	var pts := Cfg.flush_points(o.tier) * mult
 	score += pts
 	stats.flushed[o.tier] = stats.flushed.get(o.tier, 0) + 1
-	var name_s := str(o.def.name).to_upper()
-	var label := "+%d" % pts if o.tier < 4 else "%s! +%d" % [name_s, pts]
+	var name_s := Loc.t(o.def.name).to_upper()
+	var label := Loc.t("+%d") % pts if o.tier < 4 else Loc.t("%s! +%d") % [name_s, pts]
 	if mult > 1:
-		label = "%s x%d +%d" % [name_s, mult, pts]
+		label = Loc.t("%s x%d +%d") % [name_s, mult, pts]
 	fx.text(Vector2(geo.cx + randf_range(-60, 60), geo.throat_y - 60 - randf_range(0, 80)), label, Color(1, 0.85, 0.3) if mult > 1 else Color(0.6, 1.0, 0.7), 46 + o.tier * 5)
 	Sfx.play("gurgle", 1.2 - o.tier * 0.05)
 	remove_object(o)
@@ -361,7 +361,7 @@ func _flushed(o: FlushObject) -> void:
 func _on_squeezed(o: FlushObject) -> void:
 	stats.squeezed += 1
 	if state == State.PLAY:
-		fx.text(o.global_position + Vector2(0, -o.radius() - 30), "SQUEEEZE!", Color(1, 0.6, 0.4), 60)
+		fx.text(o.global_position + Vector2(0, -o.radius() - 30), Loc.t("SQUEEEZE!"), Color(1, 0.6, 0.4), 60)
 		Sfx.play("squeeze", 1.0)
 
 func _physics_process(dt: float) -> void:

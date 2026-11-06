@@ -40,9 +40,15 @@ Keys: `F`/`Space` flush · `R` retry level · `F1` collision debug · debug buil
 `C` +1 flush charge, `L` next level.
 Android: CI builds a debug APK (artifact `flush-royale-debug-apk`).
 
+## Languages
+The game is multi-language ready; it ships in English only for now. All player-visible text is in `data/i18n/en.json`
+(the English text is the key). To add a language: run `python3 tools/i18n/extract_strings.py`, copy `en.json` to e.g.
+`pl.json` and translate the values (keep `%d` / `%s` / `%.1f`). On Android the game picks the phone's language when a file
+exists, otherwise English; on PC it is always English. Details: `CLAUDE.md` §4d.
+
 ## Tests
 ```bash
-godot --headless --path . --fixed-fps 60 tests/run_tests.tscn     # 459 checks
+godot --headless --path . --fixed-fps 60 tests/run_tests.tscn     # 568 checks
 godot --headless --path . --fixed-fps 60 tests/bot_probe.tscn -- --games=3 --cap=1200 --policy=danger
 ```
 All tuning lives in `data/config.json`, `data/levels.json`, `data/bowl.json`. Architecture and tuning notes: [`CLAUDE.md`](CLAUDE.md).

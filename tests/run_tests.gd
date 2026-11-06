@@ -27,6 +27,7 @@ func _ready() -> void:
 	await test_triple_merge()
 	await test_chain()
 	await test_royal_flush_and_levels()
+	test_localisation()
 	test_project_and_export()
 	Game.carry = {}
 	print("\n==== %d checks, %d failures ====" % [checks, failures.size()])
@@ -537,6 +538,63 @@ func test_royal_flush_and_levels() -> void:
 	ok(game.hud.restart_button.text == "RETRY LEVEL", "game over offers RETRY LEVEL")
 	game._on_panel_button()
 	ok(Game.carry.get("level", -1) == 1 and Game.carry.get("score", -1) == 0, "retry restarts the level with its starting score")
+
+# ------------------------------------------------------------------ localisation
+
+func _game_scripts(dir: String, out: Array) -> void:
+	for f in DirAccess.get_files_at(dir):
+		if f.ends_with(".gd"):
+			out.append(dir.path_join(f))
+	for d in DirAccess.get_directories_at(dir):
+		_game_scripts(dir.path_join(d), out)
+
+func test_localisation() -> void:
+	var f := FileAccess.open("res://data/i18n/en.json", FileAccess.READ)
+	ok(f != null, "data/i18n/en.json exists (run tools/i18n/extract_strings.py)")
+	if f == null:
+		return
+	var en: Dictionary = JSON.parse_string(f.get_as_text())
+	# every name in the level data and every Loc.t literal in code has a key
+	for lv in Cfg.levels:
+		ok(en.has(lv.name), "en.json has level name " + str(lv.name))
+		for t in lv.tiers:
+			ok(en.has(t.name), "en.json has object name " + str(t.name))
+	var scripts: Array = []
+	_game_scripts("res://game", scripts)
+	var call := RegEx.create_from_string('Loc\\.t\\(\\s*"((?:[^"\\\\]|\\\\.)*)"\\s*\\)')
+	var display := RegEx.create_from_string('(_text\\(|fx\\.text\\(|banner\\(|\\.text = )')
+	var literal := RegEx.create_from_string('"[^"]*[A-Za-z]{2}[^"]*"')
+	for path in scripts:
+		var lines := FileAccess.get_file_as_string(path).split("\n")
+		for i in lines.size():
+			var line: String = lines[i]
+			for m in call.search_all(line):
+				ok(en.has(m.get_string(1)), "en.json has %s (%s:%d)" % [m.get_string(1), path.get_file(), i + 1])
+			# display call sites must not show raw English: every literal there goes through Loc.t
+			if display.search(line) and not line.strip_edges().begins_with("#") and not line.contains("func "):
+				var rest := call.sub(line, "", true)
+				rest = RegEx.create_from_string('Color\\([^)]*\\)').sub(rest, "", true)
+				ok(literal.search(rest) == null, "untranslated text at %s:%d: %s" % [path.get_file(), i + 1, line.strip_edges()])
+	# runtime: a language table is used, formats fill after translating, unknown keys fall back to English
+	ok(Loc.system_language() == "en", "desktop/editor language is English")
+	Loc.use_table("xx", {"FLUSH": "SPUEL", "CHAIN x%d": "KETTE x%d", "Rubber Duck": "Quietscheente", "THE BATHROOM": "DAS BAD"})
+	ok(Loc.t("FLUSH") == "SPUEL", "translated string")
+	ok(Loc.t("CHAIN x%d") % 3 == "KETTE x3", "format translated before filling")
+	ok(Loc.t("NOT A KEY") == "NOT A KEY", "unknown text falls back to English")
+	Cfg.set_level(0)
+	ok(Loc.t(Cfg.level_def().name) == "DAS BAD" and Loc.t(Cfg.tier(1).name) == "Quietscheente", "level and object names translate")
+	Loc.set_language("en")
+	ok(Loc.t("FLUSH") == "FLUSH" and Loc.lang == "en", "back to English")
+	# shipped languages must keep the placeholders of every key
+	var ph := RegEx.create_from_string("%[-+ 0#]*\\d*(?:\\.\\d+)?[dsfx%]")
+	for code in Loc.available():
+		if code == "en":
+			continue
+		var tr: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/i18n/%s.json" % code))
+		for k in tr:
+			var a := ph.search_all(k).map(func(m): return m.get_string())
+			var b := ph.search_all(str(tr[k])).map(func(m): return m.get_string())
+			ok(a == b, "%s.json keeps the placeholders of '%s'" % [code, k])
 
 func test_project_and_export() -> void:
 	ok(ProjectSettings.get_setting("display/window/handheld/orientation") == 1, "portrait orientation")

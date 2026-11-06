@@ -86,6 +86,9 @@ Still out of scope: settings, ads, store, more power-ups, dialogue system / cuts
   | holdout (flush only when overflowing) | ROYAL 6 min | ROYAL 4.5-6 min | ROYAL 4.5 min |
   | flusher (flush at the first rise) | stuck at tier 6 (flushes away its material) | same | same |
   No flood in 24 runs and no tier 7-9 lost: generous on purpose after the owner's rage-quit feedback. Tune with humans.
+  PoC 4.1 re-run (touch scan + bot uses TOILET SHAKE when the water rises): aggressive ROYAL 2.8-3.3 min per level (all 3 won),
+  conservative ROYAL 3.7-6.5 min (Royal Palace hit the 15 min run cap at tier 8, no flood). ~10 shakes per level, and the touch
+  scan made 36-54 merges per level that the contact signal had missed (~25 % of all merges!). No flood, no tier 7-9 lost.
 * Android debug APK is built by CI (`android-debug-apk` job). **Not yet played on a physical phone.**
 
 ## 3. Layout

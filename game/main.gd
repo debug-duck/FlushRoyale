@@ -28,6 +28,12 @@ var hud: Hud
 var showcase: Showcase
 var shaker: ShakeHand
 var camera: Camera2D
+var backdrop: Backdrop
+var hand_cam_offset := Vector2.ZERO  # TOILET SHAKE camera motion (ShakeHand), combined with the cascade kicks
+var hand_cam_rot := 0.0
+var trauma := 0.0                    # 1.0.1 cascade camera kicks: decays fast, offset ~ trauma^2
+var cascade_level := -1             # highest cascade level reached in the running cascade (-1 = none)
+var haptics_log: Array[int] = []     # tests: every vibration requested (ms)
 var objects_root: Node2D
 var objects: Array[FlushObject] = []
 var state := State.PLAY
@@ -78,7 +84,7 @@ func _ready() -> void:
 	add_child(cam)
 	cam.make_current()
 	camera = cam
-	var backdrop := Backdrop.new()
+	backdrop = Backdrop.new()
 	backdrop.z_index = -10
 	add_child(backdrop)
 	bowl = Bowl.new()
@@ -116,6 +122,7 @@ func _ready() -> void:
 	hud.flush_pressed.connect(request_flush)
 	hud.shake_pressed.connect(request_shake)
 	hud.restart_pressed.connect(_on_panel_button)
+	hud.menu_pressed.connect(to_menu)
 	hud.dev_pressed.connect(open_dev_panel)
 	water.squeezed.connect(_on_squeezed)
 	water.cleared.connect(_on_cleared)
@@ -318,13 +325,7 @@ func _score_merge(tier: int, pos: Vector2, r: float, triple: bool) -> void:
 	add_shake(float(Cfg.c.shake.per_merge) + (float(Cfg.c.shake.triple_bonus) if triple else 0.0))
 	fx.pop(pos, r, Color(Cfg.tier(tier).color))
 	fx.text(pos + Vector2(0, -r - 20), Loc.t("+%d") % pts, Color(1, 1, 0.8), 46)
-	if triple or chain >= 2:
-		Sfx.cascade(chain, triple)
-	if triple:
-		fx.text(pos + Vector2(0, -r - 80), Loc.t("TRIPLE MERGE!"), Color(0.5, 1.0, 0.9), 62)
-		Sfx.play("pop", 0.8)
-	elif chain >= 2:
-		fx.text(pos + Vector2(0, -r - 80), Loc.t("CHAIN x%d") % chain, Color(1.0, 0.75, 0.3), 50 + mini(chain, 6) * 4)
+	_cascade_feedback(pos, triple)
 	if not discovered.has(tier):
 		discovered[tier] = true
 		hud.reveal(tier)
@@ -334,6 +335,71 @@ func _score_merge(tier: int, pos: Vector2, r: float, triple: bool) -> void:
 			fx.text(pos + Vector2(0, -r - 140), Loc.t("NEW: %s!") % Loc.t(Cfg.tier(tier).name).to_upper(), Color(1, 0.9, 0.4), 58)
 		_remember_seen(tier)
 	Sfx.play("pop", 1.25 - tier * 0.06)
+
+## 1.0.1 cascade rewards: audiovisual only (points/meter above are unchanged). See config `cascade`.
+func _cascade_feedback(pos: Vector2, triple: bool) -> void:
+	var cc: Dictionary = Cfg.c.cascade
+	if chain <= 1:
+		cascade_level = -1
+	if chain >= 2:
+		Sfx.combo(chain)
+	if triple:
+		var tr: Dictionary = cc.triple
+		Sfx.play("triple", 1.0, -3.0)
+		fx.burst(pos, int(tr.particles), Color(0.5, 1.0, 0.9), 480.0)
+		add_trauma(float(tr.shake))
+		haptic(int(tr.haptic_ms))
+	var lvl := -1
+	var levels: Array = cc.levels
+	for i in levels.size():
+		if chain >= int(levels[i].from):
+			lvl = i
+	if lvl < 0:
+		if triple:
+			hud.combo(Loc.t(str((cc.triple.texts as Array).pick_random())), 0, Color(0.5, 1.0, 0.9))
+		return
+	var L: Dictionary = levels[lvl]
+	var col := Color(str(L.color))
+	if lvl > cascade_level:              # the cascade reached a new level: the big moment
+		cascade_level = lvl
+		hud.combo(Loc.t(str((L.texts as Array).pick_random())), chain, col)
+		add_trauma(float(L.shake))
+		fx.burst(pos, int(L.particles), col, 520.0 + 120.0 * lvl)
+		haptic(int(L.haptic_ms))
+		Sfx.sting(str(L.sting))
+		if L.get("celebrate", false):
+			var vs := get_viewport_rect().size
+			fx.confetti(Rect2(Vector2(540, 960) - vs * 0.5, vs), 90)
+			hud.flash(col)
+	else:                                # still going: count up, smaller kicks
+		hud.combo("", chain, col)
+		add_trauma(float(L.shake) * float(cc.repeat))
+		fx.burst(pos, int(int(L.particles) * 0.4), col, 420.0)
+
+## A camera kick (0..1). Decays at cascade.trauma_decay per second.
+func add_trauma(amount: float) -> void:
+	trauma = minf(1.0, trauma + amount)
+
+## Short vibration on phones (Android needs the VIBRATE permission: export preset).
+func haptic(ms: int) -> void:
+	if ms <= 0 or not bool(Cfg.c.cascade.haptics):
+		return
+	haptics_log.append(ms)
+	if OS.has_feature("mobile"):
+		Input.vibrate_handheld(ms, 0.6)
+
+func _process(dt: float) -> void:
+	if not camera:
+		return
+	var cc: Dictionary = Cfg.c.cascade
+	trauma = maxf(0.0, trauma - float(cc.trauma_decay) * dt / maxf(Engine.time_scale, 0.05))
+	var k := trauma * trauma
+	var ms: float = cc.max_shake
+	var t := Time.get_ticks_msec() * 0.001
+	var kick := Vector2(sin(t * 61.0) + 0.5 * sin(t * 97.0), cos(t * 53.0) + 0.5 * sin(t * 83.0)) * ms * k / 1.5
+	camera.ignore_rotation = false
+	camera.offset = hand_cam_offset + kick
+	camera.rotation = hand_cam_rot + sin(t * 47.0) * float(cc.max_rot) * k
 
 ## Merges fill the meter; a full meter is one more flush charge (capped).
 func add_meter(gain: float) -> void:
@@ -448,10 +514,20 @@ func start_royal_flush() -> void:
 	Sfx.stop_danger()
 	Sfx.play("royal_fanfare")
 
+## The last location ends the game: its royal flush shakes the whole universe and takes the Earth with it.
+func is_finale() -> bool:
+	return Cfg.level_def().get("finale", null) is Dictionary
+
 func _update_royal(dt: float) -> void:
 	var real_dt := dt / maxf(Engine.time_scale, 0.01)
 	royal_t += real_dt
 	var r: Dictionary = Cfg.c.royal
+	if is_finale():                       # the toilet and everything around it shake harder and harder
+		var fin: Dictionary = Cfg.level_def().finale
+		trauma = maxf(trauma, minf(float(fin.shake), royal_t * 0.18))
+		if _royal_started:
+			backdrop.earth_gone = minf(1.0, backdrop.earth_gone + real_dt / 2.5)
+			backdrop.queue_redraw()
 	if not _royal_started:
 		if royal_t >= float(r.delay):    # the slow-mo moment is over: everything goes
 			_royal_started = true
@@ -465,7 +541,7 @@ func _update_royal(dt: float) -> void:
 		return
 	_royal_next -= real_dt
 	while _royal_next <= 0.0 and not _royal_queue.is_empty():
-		var o: FlushObject = _royal_queue.pop_front()
+		var o = _royal_queue.pop_front()     # untyped: it may have merged or been removed (freed) while queued
 		if is_instance_valid(o) and objects.has(o):
 			o.start_passing(true)
 		_royal_next += float(r.stagger)
@@ -588,8 +664,13 @@ func _on_showcase_gone() -> void:
 
 func _level_done() -> void:
 	state = State.LEVEL_DONE if Cfg.level < Cfg.level_count() - 1 else State.VICTORY
-	if state == State.LEVEL_DONE and not dev:     # CONTINUE on the title starts here (dev jumps do not unlock)
-		_save.unlocked = maxi(int(_save.get("unlocked", 0)), Cfg.level + 1)
+	if not dev:                                    # dev jumps / royal-now never unlock anything
+		var pr := progress_of(_save)
+		if not pr.completed.has(Cfg.level_id()):
+			pr.completed.append(Cfg.level_id())
+		_save.completed = pr.completed
+		if state == State.LEVEL_DONE:              # CONTINUE on the title starts here; LEVEL SELECT unlocks it
+			_save.unlocked = maxi(int(pr.unlocked), Cfg.level + 1)
 	_record_best()
 	hud.show_panel(state)
 	Sfx.stop_danger()
@@ -612,7 +693,13 @@ func _on_panel_button() -> void:
 		State.GAME_OVER:
 			retry_level()
 		_:
-			new_run()
+			new_game()
+
+## NEW GAME? (after the finale): a fresh run from the first location.
+func new_game() -> void:
+	carry = {}
+	Engine.time_scale = 1.0
+	_reload()
 
 func next_level() -> void:
 	carry = {"level": Cfg.level + 1, "score": score}
@@ -621,6 +708,14 @@ func next_level() -> void:
 func retry_level() -> void:
 	carry = {"level": Cfg.level, "score": level_start_score}
 	_reload()
+
+## MENU on an end panel: back to the title screen (and its LEVEL SELECT).
+func to_menu() -> void:
+	carry = {}
+	Engine.time_scale = 1.0
+	get_tree().paused = false
+	if reload_enabled:
+		get_tree().change_scene_to_file("res://game/ui/title.tscn")
 
 ## PLAY AGAIN after the victory: back to the title screen.
 func new_run() -> void:
@@ -696,7 +791,31 @@ func _unhandled_input(event: InputEvent) -> void:
 					if Cfg.level < Cfg.level_count() - 1:
 						next_level()
 
-# ------------------------------------------------------------------ save (best score, discovered objects)
+# ------------------------------------------------------------------ save (best score, discovered objects, progress)
+
+## Progress in a save file (1.0.1): {unlocked: furthest level index reachable, completed: [level ids]}. Saves from before
+## 1.0.1 only have `unlocked` (the furthest level reached by completing the one before it): every level before it counts
+## as completed. Level ids (not indices) so a reordered level list keeps what was completed.
+static func version() -> String:
+	return str(ProjectSettings.get_setting("application/config/version", "1.0"))
+
+static func progress_of(save: Dictionary) -> Dictionary:
+	var unlocked := clampi(int(save.get("unlocked", 0)), 0, Cfg.level_count() - 1)
+	var completed: Array = []
+	var c = save.get("completed", null)
+	if c is Array:
+		completed = (c as Array).duplicate()
+	else:
+		for i in unlocked:
+			completed.append(str(Cfg.levels[i].id))
+	return {"unlocked": unlocked, "completed": completed}
+
+## A location can be played when it is the first one, when it was reached (CONTINUE), or when the one before it was completed.
+static func level_unlocked(save: Dictionary, i: int) -> bool:
+	if i <= 0 or dev:
+		return true
+	var pr := progress_of(save)
+	return i <= int(pr.unlocked) or pr.completed.has(str(Cfg.levels[i - 1].id))
 
 func _record_best() -> void:
 	if score > best:
@@ -727,6 +846,7 @@ func _write_save() -> void:
 ## The level's background painting plus its edge colours extending past it on taller or wider screens.
 class Backdrop extends Node2D:
 	var tex: Texture2D
+	var earth_gone := 0.0              # finale: 0 = the painted Earth is there, 1 = gone (spun away into empty space)
 	var top := Color(0.737, 0.92, 0.84)
 	var bottom := Color(0.93, 0.59, 0.28)
 	func _ready() -> void:
@@ -742,3 +862,17 @@ class Backdrop extends Node2D:
 		draw_rect(Rect2(-1200, 1860, 3480, 1500), bottom)
 		if tex:
 			draw_texture_rect(tex, Rect2(0, 0, 1080, 1920), false)
+			var fin = Cfg.level_def().get("finale", null)
+			if earth_gone > 0.0 and fin is Dictionary:
+				var e: Array = fin.bg_earth
+				var c := Vector2(float(e[0]), float(e[1]))
+				var r := float(e[2])
+				var sp: Array = fin.bg_space
+				var k := tex.get_width() / 1080.0          # design px -> texture px
+				var er := Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0)
+				draw_texture_rect_region(tex, er, Rect2((Vector2(float(sp[0]), float(sp[1])) - Vector2(r, r)) * k, Vector2(r, r) * 2.0 * k))
+				var s := 1.0 - earth_gone * earth_gone
+				if s > 0.01:
+					draw_set_transform(c, earth_gone * 9.0, Vector2(s, s))
+					draw_texture_rect_region(tex, Rect2(-Vector2(r, r), Vector2(r, r) * 2.0), Rect2((c - Vector2(r, r)) * k, Vector2(r, r) * 2.0 * k))
+					draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

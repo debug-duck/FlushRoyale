@@ -1,6 +1,6 @@
 {
  "_doc": "Every Layer generation used by the game (provenance + cost). Images: gpt-image-2.5-flare, quality medium, batch_size 1, priced with estimate_forge_price before running. Workspace 2f56243b-eef9-40c6-a060-8e7c186b0d35, Layer session a51c029f-36c1-4c75-bb35-bc8739852024. PoC 3 audio: Sonilo SFX / Sonilo Music 1.1 (owner permission).",
- "total_cost_creative_units": 46.786,
+ "total_cost_creative_units": 87.263,
  "jobs": [
   {
    "job_id": "bowl_background",
@@ -432,6 +432,287 @@
     "assets/processed/ui/hand_grip.png"
    ],
    "prompt": "Sprite sheet on flat magenta: the same giant right hand coming down from the top, hand-tinted Victorian engraving cut out of an old book (absurd British 1970s comedy collage animation), cross-hatching, pale skin, white lace cuff, navy sleeve, white paper cut-out border. LEFT: open hand pointing down about to grab. RIGHT: hand gripping an invisible horizontal bar."
+  },
+  {
+   "job_id": "area51_background",
+   "poc": "1.0.1",
+   "inference_id": "82a95c66-5723-4b00-b44e-1423bf735cbb",
+   "output_file_id": "95aa8a43-6cb9-4abb-a254-2f6e415b8ce5",
+   "size": "864x1536",
+   "cost_creative_units": 2.159,
+   "local_source": "assets/source/bowl_background_area51_raw.png",
+   "runtime": "assets/processed/bg_area51.jpg (+ carve())",
+   "guidance": [
+    {
+     "file_id": "b2d4f505-b8f5-42c3-9eea-bc3a1e9c7062",
+     "type": "init_image",
+     "weight": 0.9,
+     "local": "assets/source/guide/bowl_guide_area51.png"
+    },
+    {
+     "file_id": "0936f2e6-8352-4bd1-97e9-03969fe6d07f",
+     "type": "reference_image"
+    }
+   ],
+   "prompt_summary": "Secret Area 51 military bathroom: steel/porcelain alien-tech toilet with green light strips, riveted panels, hazard stripes, green tube, TOP SECRET notice, alien+general photo."
+  },
+  {
+   "job_id": "vatican_background",
+   "poc": "1.0.1",
+   "inference_id": "85a59a6b-2461-4aa3-867a-45d80c51d272",
+   "output_file_id": "8aac9d56-8bc7-4a12-b372-585b44c780d0",
+   "size": "864x1536",
+   "cost_creative_units": 2.159,
+   "local_source": "assets/source/bowl_background_vatican_raw.png",
+   "runtime": "assets/processed/bg_vatican.jpg (+ carve())",
+   "guidance": [
+    {
+     "file_id": "af106e13-8f22-4d3b-9d4c-520f65998067",
+     "type": "init_image",
+     "weight": 0.9,
+     "local": "assets/source/guide/bowl_guide_vatican.png"
+    },
+    {
+     "file_id": "0936f2e6-8352-4bd1-97e9-03969fe6d07f",
+     "type": "reference_image"
+    }
+   ],
+   "prompt_summary": "Ornate papal bathroom: marble toilet with gold filigree and angel wings, stained glass, columns, cherub fresco, red drapes."
+  },
+  {
+   "job_id": "hollywood_background",
+   "poc": "1.0.1",
+   "inference_id": "32610dd9-e2c3-4b42-8484-c6fb1b966266",
+   "output_file_id": "9953fd9a-83d9-428c-b059-8978c580ec86",
+   "size": "864x1536",
+   "cost_creative_units": 2.159,
+   "local_source": "assets/source/bowl_background_hollywood_raw.png",
+   "runtime": "assets/processed/bg_hollywood.jpg (+ carve())",
+   "guidance": [
+    {
+     "file_id": "4f50eb3c-556e-41a3-8cef-74b9c5199e65",
+     "type": "init_image",
+     "weight": 0.9,
+     "local": "assets/source/guide/bowl_guide_hollywood.png"
+    },
+    {
+     "file_id": "0936f2e6-8352-4bd1-97e9-03969fe6d07f",
+     "type": "reference_image"
+    }
+   ],
+   "prompt_summary": "Celebrity bathroom: vanity-bulb toilet, art-deco plum/gold wall, mirror with bulbs, posters, paparazzi silhouettes at the window, red carpet."
+  },
+  {
+   "job_id": "earth_background_v1_rejected",
+   "poc": "1.0.1",
+   "inference_id": "5faa890a-79eb-4408-a296-9133c4f2d94e",
+   "output_file_id": "a0c8ed68-8424-4e75-a1cd-2c39bae21abc",
+   "size": "864x1536",
+   "cost_creative_units": 2.159,
+   "local_source": "(not kept)",
+   "runtime": "-",
+   "guidance": [
+    {
+     "file_id": "83e60af6-dd64-488d-8476-e8e3265e60ef",
+     "type": "init_image",
+     "weight": 0.9,
+     "local": "assets/source/guide/bowl_guide_earth.png"
+    },
+    {
+     "file_id": "0936f2e6-8352-4bd1-97e9-03969fe6d07f",
+     "type": "reference_image"
+    }
+   ],
+   "prompt_summary": "Space toilet: funnel painted far narrower than the physics; carve() left ghost walls."
+  },
+  {
+   "job_id": "earth_background_v2_rejected",
+   "poc": "1.0.1",
+   "inference_id": "9ea31a46-ae18-44ee-989b-04ce72b878c8",
+   "output_file_id": "a00ee2cc-8d99-418d-8ee7-b976decb905f",
+   "size": "864x1536",
+   "cost_creative_units": 2.159,
+   "local_source": "(not kept)",
+   "runtime": "-",
+   "guidance": [
+    {
+     "file_id": "83e60af6-dd64-488d-8476-e8e3265e60ef",
+     "type": "init_image",
+     "weight": 0.97,
+     "local": "assets/source/guide/bowl_guide_earth.png"
+    },
+    {
+     "file_id": "0936f2e6-8352-4bd1-97e9-03969fe6d07f",
+     "type": "reference_image"
+    }
+   ],
+   "prompt_summary": "Guide weight 0.97 + explicit 'trace the guide': still a goblet shape."
+  },
+  {
+   "job_id": "earth_background",
+   "poc": "1.0.1",
+   "inference_id": "4d9949c3-1002-4118-b70d-6d63f386f761",
+   "output_file_id": "0fffe16d-288e-413f-a016-31c8e596119d",
+   "size": "864x1536",
+   "cost_creative_units": 2.159,
+   "local_source": "assets/source/bowl_background_earth_raw.png",
+   "runtime": "assets/processed/bg_earth.jpg (+ carve())",
+   "guidance": [
+    {
+     "file_id": "555006f8-a993-41a6-aae2-3e11d9e4cb35",
+     "type": "init_image",
+     "weight": 0.9,
+     "local": "bg_whitehouse.jpg (processed, 864x1536)"
+    }
+   ],
+   "prompt_summary": "LESSON: when the flat guide is ignored, use an already-correct painted background as init_image and only restyle it. Futuristic space toilet with cyan panel lines + thrusters, starfield, nebulae, Earth upper left (finale: bg_earth in levels.json), moon, satellites, cosmic pipes."
+  },
+  {
+   "job_id": "area51_sheet_v1_rejected",
+   "poc": "1.0.1",
+   "inference_id": "f756d2a8-664d-403b-b8d1-03cfadce7e47",
+   "output_file_id": "9ec7023d-5e05-45e3-acb4-de4f5c490101",
+   "size": "1536x1536",
+   "cost_creative_units": 3.825,
+   "local_source": "(not kept)",
+   "runtime": "-",
+   "guidance": [
+    {
+     "file_id": "d810927d-827c-4b27-814c-5f1655928861",
+     "type": "reference_image"
+    }
+   ],
+   "prompt_summary": "v1 rejected: tractor beams / glows would have become collision."
+  },
+  {
+   "job_id": "area51_sheet",
+   "poc": "1.0.1",
+   "inference_id": "08e929f4-3847-4c35-8548-6599fd2cf6b6",
+   "output_file_id": "43fd4f74-4bc6-4f3b-9d48-d17fad6ca8da",
+   "size": "1536x1536",
+   "cost_creative_units": 3.825,
+   "local_source": "assets/source/area51_sheet_raw.png",
+   "runtime": "assets/processed/levels/area51/tier_1..9.png",
+   "guidance": [
+    {
+     "file_id": "d810927d-827c-4b27-814c-5f1655928861",
+     "type": "reference_image"
+    },
+    {
+     "file_id": "9ec7023d-5e05-45e3-acb4-de4f5c490101",
+     "type": "reference_image"
+    }
+   ],
+   "prompt_summary": "3x3: tinfoil hat, tiny UFO, alien egg / ray gun, abducted cow (upside down), alien in a jar / Bigfoot, flying saucer, THE MOTHERSHIP. No glows/beams (redraw of v1)."
+  },
+  {
+   "job_id": "vatican_sheet",
+   "poc": "1.0.1",
+   "inference_id": "1c217f24-842e-4c88-b6fa-43d3d349bd27",
+   "output_file_id": "db6338b5-439e-4306-98ef-ca7c88874f81",
+   "size": "1536x1536",
+   "cost_creative_units": 3.825,
+   "local_source": "assets/source/vatican_sheet_raw.png",
+   "runtime": "assets/processed/levels/vatican/tier_1..9.png",
+   "guidance": [
+    {
+     "file_id": "d810927d-827c-4b27-814c-5f1655928861",
+     "type": "reference_image"
+    }
+   ],
+   "prompt_summary": "3x3: holy candle, rosary, communion chalice / holy bible, cherub, bishop's mitre / popemobile, papal tiara, St. Peter's Basilica."
+  },
+  {
+   "job_id": "hollywood_sheet_v1_rejected",
+   "poc": "1.0.1",
+   "inference_id": "39375929-47d6-495e-a517-59a0d0f96e04",
+   "output_file_id": "67c54ed2-3357-483a-8f83-c5388c46d9e3",
+   "size": "1536x1536",
+   "cost_creative_units": 3.825,
+   "local_source": "(not kept)",
+   "runtime": "-",
+   "guidance": [
+    {
+     "file_id": "d810927d-827c-4b27-814c-5f1655928861",
+     "type": "reference_image"
+    }
+   ],
+   "prompt_summary": "v1 rejected: the handbag had a monogram pattern imitating a real brand."
+  },
+  {
+   "job_id": "hollywood_sheet",
+   "poc": "1.0.1",
+   "inference_id": "69bbe2ce-8eb9-4e5e-b093-064906d917cc",
+   "output_file_id": "cac9ab1f-baf7-4650-a4d0-485d4f32ed70",
+   "size": "1536x1536",
+   "cost_creative_units": 3.825,
+   "local_source": "assets/source/hollywood_sheet_raw.png",
+   "runtime": "assets/processed/levels/hollywood/tier_1..9.png",
+   "guidance": [
+    {
+     "file_id": "d810927d-827c-4b27-814c-5f1655928861",
+     "type": "reference_image"
+    },
+    {
+     "file_id": "67c54ed2-3357-483a-8f83-c5388c46d9e3",
+     "type": "reference_image"
+    }
+   ],
+   "prompt_summary": "3x3: lipstick, sunglasses, golden movie trophy (generic) / paparazzi camera, clapperboard, movie camera / chihuahua in a PLAIN pink handbag, furious movie star, entire movie studio."
+  },
+  {
+   "job_id": "earth_sheet",
+   "poc": "1.0.1",
+   "inference_id": "d99d1f53-4601-439a-b50f-85c67a34c29c",
+   "output_file_id": "6298ec72-b3f3-4bfa-9749-3c0507d359db",
+   "size": "1536x1536",
+   "cost_creative_units": 3.825,
+   "local_source": "assets/source/earth_sheet_raw.png",
+   "runtime": "assets/processed/levels/earth/tier_1..9.png",
+   "guidance": [
+    {
+     "file_id": "d810927d-827c-4b27-814c-5f1655928861",
+     "type": "reference_image"
+    }
+   ],
+   "prompt_summary": "3x3: stone wheel, ancient scroll, light bulb / retro TV, smartphone (cat), bored AI robot with coffee / space rocket, nuclear warhead, planet Earth."
+  },
+  {
+   "job_id": "title_bg_tall",
+   "poc": "1.0.1",
+   "inference_id": "a37c0426-71d4-4695-a8b8-d563ca1f42d5",
+   "output_file_id": "f20750ae-f15d-437a-9cec-ae372b6ce95c",
+   "size": "864x2048",
+   "cost_creative_units": 2.873,
+   "local_source": "assets/source/title_bg_tall_raw.png",
+   "runtime": "assets/processed/ui/title_bg_tall.jpg (1080x2560)",
+   "guidance": [
+    {
+     "file_id": "d7847cbe-2644-41cc-a754-f20afd2918b3",
+     "type": "init_image",
+     "weight": 1.0,
+     "mask": "for_transparency",
+     "note": "title_bg_raw.png at y 256 of a transparent 864x2048 canvas"
+    }
+   ],
+   "prompt_summary": "Outpaint (transparent-mask inpainting) of the title key art to 9:21 for tall phones: wall + light rays above, tiled floor below. Original pixels kept."
+  },
+  {
+   "job_id": "ui_icons",
+   "poc": "1.0.1",
+   "inference_id": "4e9fb5d2-6427-4017-a341-9cf755136ec3",
+   "output_file_id": "65e3eb6a-0200-4b6e-8cfc-a0dd3d284a59",
+   "size": "1024x1024",
+   "cost_creative_units": 1.7,
+   "local_source": "assets/source/ui_icons_raw.png",
+   "runtime": "assets/processed/ui/icon_{lock,done,plunger,crown}.png",
+   "guidance": [
+    {
+     "file_id": "d810927d-827c-4b27-814c-5f1655928861",
+     "type": "reference_image"
+    }
+   ],
+   "prompt_summary": "2x2 on magenta: golden padlock, green check badge with crown, red plunger, golden crown."
   }
  ]
 }

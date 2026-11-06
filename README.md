@@ -1,22 +1,33 @@
-# 🚽 FLUSH ROYALE — Wrong Button Studio gameplay PoC (Godot 4.4)
+# 🚽 FLUSH ROYALE 1.0.1 — Wrong Button Studio (Godot 4.4)
 
 Throw ridiculous bathroom objects into a giant toilet, merge identical ones into bigger ones, and flush them for points
 before the toilet clogs and overflows.
 
-Three ridiculous locations, nine objects each - what the hell comes after a radioactive sock? Make the ninth and press
-**ROYAL FLUSH**:
+Seven ridiculous locations, nine objects each - what the hell is humanity going to throw into a toilet next? Make the ninth
+and press **ROYAL FLUSH**:
 * **The Dormitory** - *Higher Education, Lower Standards:* Party Cup → Moldy Pizza → Radioactive Sock → Unopened Textbook →
   Emotional Support Plushie → Laptop with 73 Tabs → Filthy Couch → Student Debt Monster → **Entire University**
 * **The White House** - *Make America Flush Again!:* Presidential Pen → Presidential Phone → Classified Documents → Ballot Box →
   Presidential Megaphone → Nuclear Football → Bald Eagle → Statue of Liberty → **The White House**
 * **The Royal Palace** - *The Ultimate Royal Flush:* Silver Spoon → Royal Teapot → Tiny Crown → Royal Frog → Palace Guard →
   Golden Throne → Royal Horse → Royal Castle → **The King**
+* **Area 51** - *The Truth Is Down There:* Tinfoil Hat → Tiny UFO → Alien Egg → Ray Gun → Abducted Cow → Alien in a Jar →
+  Bigfoot → Flying Saucer → **The Mothership**
+* **The Vatican** - *Holy Shit:* Holy Candle → Rosary → Communion Chalice → Holy Bible → Cherub → Bishop's Mitre →
+  Popemobile → Papal Tiara → **St. Peter's Basilica**
+* **Hollywood** - *Flush, Camera, Action!:* Lipstick → Designer Sunglasses → Golden Movie Trophy → Paparazzi Camera →
+  Clapperboard → Movie Camera → Chihuahua in a Handbag → Furious Movie Star → **Entire Movie Studio**
+* **Planet Earth** - *Humanity's Greatest Achievement* (the finale): The Wheel → Ancient Scroll → Light Bulb → Television →
+  Smartphone → AI Robot → Space Rocket → Nuclear Warhead → **Planet Earth**. Well. That escalated rather quickly.
+
+**LEVELS** on the title screen: replay any location you have reached; completing one unlocks the next.
 
 ## How to play
 * **Aim & throw:** touch/click near the object above the bowl, drag *back*, release. Longer drag = harder throw; the dotted line
   shows the flight. A tiny drag cancels.
 * **Merge:** two identical objects merge on contact into the next one (small points). Merges in quick succession build a
   **CHAIN** (more points, faster flush meter). **TRIPLE MERGE:** three identical objects at once become TWO of the next one.
+  Long cascades get louder, shakier and sparklier (COMBO! → HOLY CRAP! → WHAT THE FLUSH?!) - phones buzz along.
 * **Discover:** the strip at the top shows the level's nine objects; unknown ones are silhouettes until you create them.
 * **Rising water:** heavy things sink into the drain. When it clogs, the water RISES - slowly for a partial clog, faster for a
   bad one; clear the drain and the water gulps away. Water over the red dashed line for 3 seconds = **FLOODED**.
@@ -34,6 +45,10 @@ Three ridiculous locations, nine objects each - what the hell comes after a radi
   (tap to skip). And every location's last object gets a grand reveal... which does not survive the ROYAL FLUSH either.
 
 Keep merging, try the trick shot, or sacrifice your precious objects to survive?
+
+## What's new in 1.0.1
+Four new locations (Area 51, The Vatican, Hollywood, Planet Earth - with a finale), a LEVEL SELECT screen with unlocks,
+spectacular cascades, the title screen now fills tall phones, a blue boot splash. Old save files keep working.
 
 ## Run it on Windows
 * **`run_pc.bat`**: pulls the latest version from GitHub (always the repository's default branch), downloads Godot 4.4.1 once (into `build\godot`), re-imports the
@@ -61,7 +76,7 @@ exists, otherwise English; on PC it is always English. Details: `CLAUDE.md` §4d
 
 ## Tests
 ```bash
-godot --headless --path . --fixed-fps 60 tests/run_tests.tscn     # ~720 checks
+godot --headless --path . --fixed-fps 60 tests/run_tests.tscn     # ~1100 checks
 godot --headless --path . --fixed-fps 60 tests/bot_probe.tscn -- --games=3 --cap=1200 --policy=conservative
 ```
 All tuning lives in `data/config.json`, `data/levels.json`, `data/bowl.json`. Architecture and tuning notes: [`CLAUDE.md`](CLAUDE.md).

@@ -3,7 +3,7 @@ extends Node
 ## and the reveal card being flushed (shake, tearing, swallowed).
 ##   xvfb-run -a -s "-screen 0 1280x1024x24" godot --path . --rendering-driver opengl3 --resolution 540x960 tools/dev/shots_cards.tscn
 
-const INTROS := [[0, 6], [1, 3], [2, 5], [0, 8], [1, 6], [2, 8]]
+const INTROS := [[0, 6], [1, 3], [2, 5], [0, 8], [1, 6], [2, 8], [3, 6], [4, 7], [5, 8], [6, 6]]
 var game: Game
 
 func _ready() -> void:
@@ -17,7 +17,7 @@ func _ready() -> void:
 		await _shot("card_%s_%d" % [Cfg.level_id(), it[1]])
 		game.showcase.dismiss()
 		await _frames(30)
-	for lv in 3:
+	for lv in [3, 4, 5, 6]:
 		await _new(lv)
 		game.dev_royal_now()
 		while not game.royal_armed:

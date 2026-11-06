@@ -17,6 +17,18 @@ def key_magenta(img: Image.Image) -> Image.Image:
     safe = np.maximum(alpha, 0.05)[..., None]
     fg = (a - (1.0 - alpha)[..., None] * BG) / safe
     fg = np.clip(fg, 0, 255)
+    # pink/purple paint INSIDE an object (enclosed by its outline, not connected to the sheet's background) is not
+    # background: keep it opaque in its own colour. Enclosed pure magenta (a hole, e.g. a wheel's) still keys out.
+    soft = alpha < 0.96
+    lab, n = ndimage.label(soft)
+    border = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
+    for i in range(1, n + 1):
+        if i in border:
+            continue
+        comp = lab == i
+        if np.median(alpha[comp]) > 0.3:
+            alpha[comp] = 1.0
+            fg[comp] = a[comp]
     out = np.dstack([fg, alpha * 255.0]).astype(np.uint8)
     out[alpha < 0.04] = 0
     return Image.fromarray(out, "RGBA")

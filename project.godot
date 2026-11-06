@@ -4,11 +4,12 @@ config_version=5
 [application]
 
 config/name="Flush Royale"
+config/version="1.0.1"
 config/description="Physics merging PoC: throw ridiculous bathroom objects, merge them, flush them without clogging the toilet."
 run/main_scene="res://game/ui/title.tscn"
 config/features=PackedStringArray("4.4", "Mobile")
 run/max_fps=60
-boot_splash/bg_color=Color(1, 1, 1, 1)
+boot_splash/bg_color=Color(0.1176, 0.3922, 0.8235, 1)
 boot_splash/show_image=true
 boot_splash/image="res://assets/processed/ui/splash_wrong_button.png"
 boot_splash/fullsize=true
@@ -49,4 +50,4 @@ common/physics_ticks_per_second=60
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
-environment/defaults/default_clear_color=Color(0.75, 0.9, 0.86, 1)
+environment/defaults/default_clear_color=Color(0.1176, 0.3922, 0.8235, 1)

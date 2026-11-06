@@ -52,6 +52,22 @@
     "start_charges": 1,
     "max_charges": 3
   },
+  "cascade": {
+    "_doc": "1.0.1 cascade rewards (feedback only: merge rules and points unchanged). A cascade = merges less than chain.window s apart (Game.chain). From chain 2 every merge plays a rising procedural 'pling' (pentatonic, +1 step per merge). A TRIPLE merge always gets its own message, burst, arpeggio and a small kick. When a cascade reaches a level (chain >= from) it shows one of the level's texts in the HUD combo label (one label, updated in place: never overlapping messages), kicks the camera (shake = trauma added; later merges in the same level add shake * repeat), bursts `particles`, buzzes `haptic_ms` on Android and plays the level's sting; `celebrate` adds confetti + a screen flash once per cascade. Camera trauma decays at trauma_decay/s, offset = max_shake * trauma^2 (never continuous). Nothing here pauses or slows the game.",
+    "pling_semitones": [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26, 28, 31],
+    "repeat": 0.25,
+    "trauma_decay": 2.2,
+    "max_shake": 30,
+    "max_rot": 0.025,
+    "haptics": true,
+    "label_hold": 1.3,
+    "triple": {"shake": 0.32, "particles": 18, "haptic_ms": 30, "texts": ["TRIPLE TROUBLE!", "HAT TRICK!", "THREE'S A CROWD!"]},
+    "levels": [
+      {"from": 3, "shake": 0.35, "particles": 16, "haptic_ms": 25, "sting": "cascade_1", "color": "ffd25a", "texts": ["COMBO!", "NICE!", "PLUMB GOOD!", "SPLASHING!"]},
+      {"from": 5, "shake": 0.55, "particles": 32, "haptic_ms": 45, "sting": "cascade_2", "color": "ff8a3a", "texts": ["HOLY CRAP!", "FLUSH-TASTIC!", "PIPE DREAMS!", "TOTAL BOWL-SHEVIK!"]},
+      {"from": 8, "shake": 0.8, "particles": 60, "haptic_ms": 90, "sting": "cascade_3", "color": "ff4adf", "celebrate": true, "texts": ["WHAT THE FLUSH?!", "CALL A PLUMBER!", "SEWER-PREME!", "THE PIPES! THE PIPES!"]}
+    ]
+  },
   "shake": {
     "_doc": "TOILET SHAKE bonus (game/fx/shake_hand.gd). Earned by merges: per_merge (+ triple_bonus) fills the shake meter, full = 1 shake (max max_charges). A cut-out hand reaches down (reach_time), grabs the rim (grab_pause) and shakes for `duration` s at `freq` Hz: on every beat (2 x freq per s, alternating left/right) every free object gets a velocity jolt (v = v * keep + jolt: never accumulates into a launch): kick_x sideways (x 1 +- jitter, plus a random share) and up to kick_y upward (they rub against each other -> new contacts -> merges), random spin; on each beat anything lower than throat_y - unplug_above (the funnel) is kicked up at unplug_speed (unclogs). The hand grips the right rim (inner rim x + grip_dx). Camera shake/tilt and water slosh are visual. anim_fps = stop-motion steps of the hand.",
     "per_merge": 0.06,

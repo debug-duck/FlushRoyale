@@ -37,6 +37,9 @@ func _ready() -> void:
 	streams.rattle = _make(1.4, func(t, u): return (_noise() * (1.0 if sin(TAU * 17.0 * t) > 0.0 else 0.25) * 0.3 + sin(TAU * (120.0 * t) + 4.0 * sin(TAU * 9.0 * t)) * 0.12) * (0.3 + 0.7 * u))
 	streams.slide_down = _make(1.3, func(t, u): return sin(TAU * (1500.0 * (1.0 - exp(-1.8 * t)) / 1.8 + 110.0 * t)) * pow(sin(PI * u), 0.5) * 0.32)
 	streams.whoosh = _make(0.3, func(t, u): return _noise() * sin(PI * u) * 0.3)
+	# 1.0.1 cascade feedback: a bright bell 'pling' (played at rising pitches) and a three-note triple arpeggio
+	streams.pling = _make(0.32, func(t, u): return (sin(TAU * 880.0 * t) + 0.45 * sin(TAU * 1760.0 * t) + 0.2 * sin(TAU * 2640.0 * t)) * exp(-t * 11.0) * 0.32)
+	streams.triple = _make(0.42, func(t, u): return sin(TAU * (660.0 if t < 0.09 else (880.0 if t < 0.18 else 1320.0)) * t) * exp(-fmod(t, 0.09) * 10.0 - t * 2.0) * 0.4)
 	for f in DirAccess.get_files_at("res://assets/audio/"):
 		var n := f.trim_suffix(".import")
 		if n.ends_with(".ogg") and not streams.has(n.get_basename()):
@@ -76,6 +79,21 @@ func cascade(chain: int, triple := false) -> void:
 		return
 	_cascade.stream = streams[id]
 	_cascade.pitch_scale = 1.0 + 0.06 * clampi(chain - (6 if chain >= 6 else (4 if chain >= 4 else 2)), 0, 4)
+	_cascade.volume_db = -3.0
+	_cascade.play()
+
+## One merge of a cascade: a pling one pentatonic step higher per chained merge (chain 2 = first step).
+func combo(chain: int) -> void:
+	var st: Array = Cfg.c.cascade.pling_semitones
+	var semi: float = float(st[clampi(chain - 2, 0, st.size() - 1)])
+	play("pling", pow(2.0, semi / 12.0), -6.0 + minf(chain, 8) * 0.5)
+
+## A cascade level's sting (Sonilo clip), restarts on the cascade player.
+func sting(id: String) -> void:
+	if muted or not streams.has(id):
+		return
+	_cascade.stream = streams[id]
+	_cascade.pitch_scale = 1.0
 	_cascade.volume_db = -3.0
 	_cascade.play()
 

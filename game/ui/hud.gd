@@ -8,6 +8,7 @@ signal flush_pressed
 signal shake_pressed
 signal restart_pressed
 signal dev_pressed
+signal menu_pressed
 
 const INK := Color(0.1, 0.1, 0.18)
 const GOLD := Color(1.0, 0.82, 0.3)
@@ -20,6 +21,7 @@ var _shake_icon: Texture2D
 var _shake_flash_t := 9.0
 var _shake_flash_bad := false
 var restart_button: Button
+var menu_button: Button
 var dev_button: Button
 var font: Font
 var _panel_t := -1.0
@@ -31,6 +33,12 @@ var _banner_royal := false
 var _banner_sub := ""
 var _flash_t := 9.0
 var _flash_bad := false
+var _combo_text := ""            # 1.0.1 cascade label (one, updated in place)
+var _combo_n := 0
+var _combo_col := Color.WHITE
+var _combo_t := 9.0
+var _flash_col := Color.WHITE
+var _screen_flash_t := 9.0
 var _reveal := {}                 # tier -> seconds since revealed
 
 func _ready() -> void:
@@ -41,6 +49,7 @@ func _ready() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.draw.connect(_draw_hud)
 	add_child(root)
+	fit_safe_area(root)
 	flush_button = Button.new()
 	flush_button.flat = true
 	flush_button.focus_mode = Control.FOCUS_NONE
@@ -75,6 +84,19 @@ func _ready() -> void:
 	restart_button.add_theme_color_override("font_color", Color.WHITE)
 	restart_button.pressed.connect(func(): restart_pressed.emit())
 	root.add_child(restart_button)
+	menu_button = Button.new()               # end panels: back to the title (LEVEL SELECT lives there)
+	menu_button.text = Loc.t("MENU")
+	menu_button.focus_mode = Control.FOCUS_NONE
+	menu_button.add_theme_font_size_override("font_size", 44)
+	_place(menu_button, Vector2(0.5, 0.5), Rect2(-160, 350, 320, 100))
+	var msb := sb.duplicate()
+	msb.bg_color = Color(0.45, 0.48, 0.58)
+	for st in ["normal", "hover", "pressed", "focus"]:
+		menu_button.add_theme_stylebox_override(st, msb)
+	menu_button.add_theme_color_override("font_color", Color.WHITE)
+	menu_button.visible = false
+	menu_button.pressed.connect(func(): menu_pressed.emit())
+	root.add_child(menu_button)
 	dev_button = Button.new()
 	dev_button.text = Title.DEV_LABEL
 	dev_button.focus_mode = Control.FOCUS_NONE
@@ -90,6 +112,21 @@ func _ready() -> void:
 	dev_button.visible = Game.dev
 	dev_button.pressed.connect(func(): dev_pressed.emit())
 	root.add_child(dev_button)
+
+## Phones with a notch / rounded corners / gesture bar: keep a full-screen control inside the display's safe area
+## (converted from window pixels to canvas units). Only on mobile: on desktop the "safe area" is the monitor's, not ours.
+static func fit_safe_area(c: Control) -> void:
+	if not OS.has_feature("mobile") or not c.is_inside_tree():
+		return
+	var win := Vector2(DisplayServer.window_get_size())
+	var safe := DisplayServer.get_display_safe_area()
+	if win.x <= 0.0 or safe.size.x <= 0:
+		return
+	var f := c.get_viewport_rect().size / win
+	c.offset_left = safe.position.x * f.x
+	c.offset_top = safe.position.y * f.y
+	c.offset_right = -(win.x - safe.end.x) * f.x
+	c.offset_bottom = -(win.y - safe.end.y) * f.y
 
 ## Anchor a control to one point of the screen (0..1) with a pixel rect relative to it.
 static func _place(c: Control, anchor: Vector2, r: Rect2) -> void:
@@ -108,6 +145,20 @@ func banner(text: String, seconds: float, royal := false, sub := "") -> void:
 	_banner_t = 0.0
 	_banner_len = seconds
 	_banner_royal = royal
+
+## The cascade label below the discovery strip: a message (kept until a new one arrives) and the merge count.
+## text "" = only update the count. n = 0: no count (a lone triple).
+func combo(text: String, n: int, col: Color) -> void:
+	if text != "":
+		_combo_text = text
+	_combo_n = n
+	_combo_col = col
+	_combo_t = 0.0
+
+## A brief full-screen flash (exceptional cascade).
+func flash(col: Color) -> void:
+	_flash_col = col
+	_screen_flash_t = 0.0
 
 func banner_busy() -> bool:
 	return _banner_t < _banner_len
@@ -129,11 +180,21 @@ func show_panel(state: int) -> void:
 	_panel_t = 0.0
 	_panel_state = state
 	restart_button.visible = true
+	menu_button.visible = true
+	flush_button.visible = false             # the round is over: no gameplay buttons on top of the panel
+	shake_button.visible = false
+	dev_button.visible = false
+	if state == Game.State.VICTORY:          # the finale's buttons appear after the fade to black
+		restart_button.modulate.a = 0.0
+		menu_button.modulate.a = 0.0
+		var tw := restart_button.create_tween().set_parallel()
+		tw.tween_property(restart_button, "modulate:a", 1.0, 0.6).set_delay(1.8)
+		tw.tween_property(menu_button, "modulate:a", 1.0, 0.6).set_delay(1.8)
 	match state:
 		Game.State.LEVEL_DONE:
 			restart_button.text = Loc.t("NEXT LEVEL")
 		Game.State.VICTORY:
-			restart_button.text = Loc.t("PLAY AGAIN")
+			restart_button.text = Loc.t("NEW GAME")
 		_:
 			restart_button.text = Loc.t("RETRY LEVEL")
 
@@ -146,6 +207,8 @@ func _process(dt: float) -> void:
 		_panel_t += dt
 	_banner_t += dt
 	_flash_t += dt
+	_combo_t += dt
+	_screen_flash_t += dt
 	_shake_flash_t += dt
 	shake_button.queue_redraw()
 	for k in _reveal:
@@ -192,6 +255,9 @@ func _draw_hud() -> void:
 			var left: float = float(Cfg.c.overflow.grace_time) - game.over_t
 			var flash := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.02)
 			_text(Vector2(cx, vs.y * 0.37), Loc.t("OVERFLOWING! %.1f") % maxf(left, 0.0), 80, Color(1, 0.3 + 0.4 * flash, 0.2), true)
+	_draw_combo(vs)
+	if _screen_flash_t < 0.35:
+		root.draw_rect(Rect2(Vector2.ZERO, vs), Color(_flash_col.lerp(Color.WHITE, 0.6), 0.45 * (1.0 - _screen_flash_t / 0.35)))
 	# banner (not over an end panel or a presentation card)
 	if banner_busy() and _panel_t < 0.0 and not game.showcase.active():
 		var a := clampf(minf(_banner_t * 4.0, (_banner_len - _banner_t) * 2.0), 0.0, 1.0)
@@ -207,7 +273,8 @@ func _draw_hud() -> void:
 	# end panels
 	if _panel_t >= 0.0:
 		var a := clampf(_panel_t * 2.0, 0.0, 0.72)
-		root.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.05, 0.08, 0.15, a))
+		if _panel_state != Game.State.VICTORY:
+			root.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.05, 0.08, 0.15, a))
 		var y := vs.y * 0.5
 		match _panel_state:
 			Game.State.LEVEL_DONE:
@@ -216,12 +283,13 @@ func _draw_hud() -> void:
 				_text(Vector2(cx, y - 40), Loc.t("LEVEL SCORE %d") % (game.score - game.level_start_score), 60, Color.WHITE, true)
 				_text(Vector2(cx, y + 50), Loc.t("TOTAL %d") % game.score, 50, Color(1, 1, 1, 0.85), true)
 				_text(Vector2(cx, y + 120), Loc.t("NEXT: %s") % Loc.t(Cfg.levels[Cfg.level + 1].name), 44, GOLD, true)
-			Game.State.VICTORY:
-				_text_lines(Vector2(cx, y - 420), Loc.t(Cfg.level_text("royal_message")), 64, vs.x - 80.0, Color(0.6, 0.9, 1.0))
-				_text(Vector2(cx, y - 240), Loc.t("ALL HAIL"), 80, Color.WHITE, true)
-				_text(Vector2(cx, y - 120), Loc.t("THE FLUSH KING!"), 110, GOLD, true)
-				_text(Vector2(cx, y - 10), Loc.t("SCORE %d") % game.score, 80, Color.WHITE, true)
-				_text(Vector2(cx, y + 80), Loc.t("BEST %d") % game.best, 54, GOLD, true)
+			Game.State.VICTORY:   # the finale: everything is gone. Fade to black, then the question.
+				root.draw_rect(Rect2(Vector2.ZERO, vs), Color(0, 0, 0, clampf(_panel_t / 1.6, 0.0, 1.0)))
+				var ta := clampf((_panel_t - 1.4) / 0.8, 0.0, 1.0)
+				_text_lines(Vector2(cx, y - 420), Loc.t(Cfg.level_text("royal_message")), 50, vs.x - 100.0, Color(0.6, 0.9, 1.0, ta))
+				_text(Vector2(cx, y - 170), Loc.t("NEW GAME?"), 120, Color(GOLD, ta), true)
+				_text(Vector2(cx, y - 40), Loc.t("SCORE %d") % game.score, 64, Color(1, 1, 1, ta), true)
+				_text(Vector2(cx, y + 40), Loc.t("BEST %d") % game.best, 46, Color(GOLD, ta * 0.8), true)
 			_:
 				_text(Vector2(cx, y - 220), Loc.t("FLOODED!"), 140, Color(0.6, 0.85, 1.0), true)
 				_text(Vector2(cx, y - 80), Loc.t("SCORE %d") % game.score, 80, Color.WHITE, true)
@@ -407,3 +475,16 @@ func _draw_shake_button() -> void:
 	var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 34).x
 	shake_button.draw_string_outline(font, c + Vector2(-w * 0.5, r + 2), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, 10, INK)
 	shake_button.draw_string(font, c + Vector2(-w * 0.5, r + 2), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color.WHITE)
+
+## Cascade label: pops on every update, wobbles while it lasts, fades after cascade.label_hold s.
+func _draw_combo(vs: Vector2) -> void:
+	var hold: float = Cfg.c.cascade.label_hold
+	if _combo_t > hold + 0.4 or _combo_text == "" or _panel_t >= 0.0 or game.showcase.active():
+		return
+	var a := clampf((hold + 0.4 - _combo_t) / 0.4, 0.0, 1.0)
+	var pop := 1.0 + 0.45 * exp(-_combo_t * 9.0)
+	var y := 410.0
+	var wob := sin(_combo_t * 11.0) * 4.0 * exp(-_combo_t * 2.0)
+	_text_fit(Vector2(vs.x * 0.5, y + wob), _combo_text, int(84 * pop), vs.x - 80.0, Color(_combo_col, a), 18)
+	if _combo_n >= 2:
+		_text(Vector2(vs.x * 0.5, y + 64), Loc.t("CHAIN x%d") % _combo_n, int(50 * (1.0 + 0.3 * exp(-_combo_t * 12.0))), Color(1, 1, 1, a), true, 12)

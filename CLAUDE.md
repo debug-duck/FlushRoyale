@@ -1,4 +1,4 @@
-# CLAUDE.md — project brain for FLUSH ROYALE (Wrong Button Studio, Godot 4 gameplay PoC)
+# CLAUDE.md — project brain for FLUSH ROYALE (Wrong Button Studio, Godot 4) — version 1.0.1
 
 Read this first; update it when an important decision changes.
 
@@ -66,17 +66,32 @@ AIM → THROW → MERGE → GROW → FLUSH → SCORE / CLOG → RECOVER. Comedy 
   style, 12 fps stop-motion) reaches down, grips the right rim and shakes the toilet: every object lurches and hops, stuck plugs
   are kicked out of the drain, camera shake/tilt + water slosh. Key S. Gameplay value: unsticks resting / wedged objects
   (new contacts → merges) and unclogs (the `cleared` drop lowers the water).
-Still out of scope: settings, ads, store, more power-ups, dialogue system / cutscenes (see §9).
+**1.0.1 "Content Expansion & Arcade Polish"** (owner brief, 2026-11-06; first non-PoC version, Layer budget 75 CU, used 40.5):
+* **7 locations** (play order): Dormitory, White House, Royal Palace, **AREA 51** ("The Truth Is Down There": tinfoil hat … THE
+  MOTHERSHIP), **THE VATICAN** ("Holy Shit": holy candle … St. Peter's Basilica), **HOLLYWOOD** ("Flush, Camera, Action!": lipstick …
+  entire movie studio), **PLANET EARTH** ("Humanity's Greatest Achievement": the wheel … Planet Earth = the FINALE). Same level
+  architecture (levels.json + Layer art + generated collision), 4 intro cards + a grand reveal each. Owner suggestions were improved
+  where funnier (tinfoil hat, Bigfoot, Popemobile, chihuahua in a handbag).
+* **LEVEL SELECT** from the title (LEVELS): one card per `Cfg.levels` entry; locked / open / completed; replay any open location;
+  completing a location unlocks the next. Save `completed` [level ids] + `unlocked` (pre-1.0.1 saves still work). MENU on end panels.
+* **Cascade rewards** (feedback only, rules unchanged): rising pling per chained merge, TRIPLE TROUBLE etc., levels at chain 3/5/8
+  with one HUD combo label, brief camera kicks, particle bursts, confetti + flash for exceptional cascades, Android haptics.
+* **Mobile title fix**: the key art was outpainted (Layer) to 9:21 and is drawn cover-style (no blue bars on 19.5:9 / 20:9 / tablets);
+  UI keeps to the safe area on phones. **Blue boot splash** (canvas = bg_color = clear colour: no borders or flashes).
+* **Earth finale**: the final royal flush shakes everything harder and harder, the painted Earth spins away, fade to black, NEW GAME?
+Still out of scope: settings, ads, store, more power-ups, dialogue system / cutscenes, accounts / online (see §9).
 
 ## 2. Status
 * Engine pinned **Godot 4.4.1-stable** (`tools/ci/godot_version.env`), GDScript, `gl_compatibility`, 1080×1920 `canvas_items` + `expand`
   (a Camera2D centres the design area on any aspect). Physics 60 Hz, gravity 1600, default damping 0.
 * Boot splash = Wrong Button Studio logo (`assets/processed/ui/splash_wrong_button.png`, from the original `Studio_Logo.png` at the root,
   which is excluded from the APK), not the Godot one; guarded by `test_project_and_export`. Package `com.wrongbutton.flushroyale`.
-* `tests/run_tests.tscn`: ~720 checks, all pass (PoC 1-2 criteria, every tier of every level can go down the drain, rising water vs
+* `tests/run_tests.tscn`: ~1100 checks, all pass (PoC 1-2 criteria, every tier of every level can go down the drain, rising water vs
   obstruction, natural clear by merging, big plugs survive one flush / repeated flushes sacrifice, sacrifice drains water, royal
   unlock/arm/trigger + overflow immunity, title + dev mode, splash, localisation, PoC 4 cards: once, after the cascade, tap/timeout,
-  reveal on completion, card torn into the drain before the level transition).
+  reveal on completion, card torn into the drain before the level transition; 1.0.1: 7 locations x 9 unique tiers with sprites +
+  collision + thumbnails, every royal flush incl. the finale, level select + unlocks + old-save compatibility, cascade tiers,
+  title coverage 16:9..21:9 + tablets, blue splash, version).
 * Multi-language READY (§4d), English only: no translations yet (owner: they come with PoC 3).
 * Bot probe, PoC 3.1 numbers (`tests/bot_probe.tscn -- --start=N --policy=P`, 15 min cap, 2 games each, aiming bot that prefers the clog):
   | style | Dormitory | White House | Royal Palace |
@@ -89,6 +104,9 @@ Still out of scope: settings, ads, store, more power-ups, dialogue system / cuts
   PoC 4.1 re-run (touch scan + bot uses TOILET SHAKE when the water rises): aggressive ROYAL 2.8-3.3 min per level (all 3 won),
   conservative ROYAL 3.7-6.5 min (Royal Palace hit the 15 min run cap at tier 8, no flood). ~10 shakes per level, and the touch
   scan made 36-54 merges per level that the contact signal had missed (~25 % of all merges!). No flood, no tier 7-9 lost.
+  1.0.1 new locations (`--start=3`, 2 games each): aggressive ROYAL Area 51 2.3-3.5 min, Vatican 2.8-3.3, Hollywood 3.5-4,
+  Earth 2.2-4 (finale won); conservative 3-4.7 / 4-5.8 / 5.4-6 / 3-5.3 min. No flood, no tier 7-9 lost, ~10 shakes per level,
+  headless frame avg 1.8 ms (worst ~60 ms at level loads). Hollywood is the longest (many floaters); tune with humans.
 * Android debug APK is built by CI (`android-debug-apk` job). **Not yet played on a physical phone.**
 
 ## 3. Layout
@@ -105,6 +123,7 @@ game/throw/launcher.gd  slingshot input (touch == mouse), preview, launch, coold
 game/fx/fx.gd · game/ui/hud.gd   floating text/pops/droplets · score, next, FLUSH button, water gauge, warnings, game over, DEV button
 game/ui/title.gd        title screen (main scene): key art, bouncing logo, objects spiralling into the toilet, PLAY/CONTINUE, logo 5x = DEV
 game/fx/shake_hand.gd   TOILET SHAKE bonus: the cut-out hand (stop-motion), velocity jolts on every object, unplug kicks, camera shake
+game/ui/level_select.gd LEVEL SELECT (1.0.1): cards generated from Cfg.levels, locked/open/completed, scroll list, BACK
 game/ui/showcase.gd     PoC 4 presentation card (intro / grand reveal / flushed into the drain), world space, real time
 game/debug/dev_panel.gd DEV MODE cheat panel (English only)
 data/config.json        EVERY tuning value (throw, tiers size curve, merge/triple, chain, meter, royal, water, flush, drain, overflow, score)
@@ -163,6 +182,25 @@ tests/                  run_tests (acceptance), drain_probe (per-tier flush trac
   NOT work (stroke a/ω² is a few px and water drag eats it). `test_toilet_shake`: earned after ⌈1/per_merge⌉ merges, every object
   moves ≥ 60 px (typically 100-300), nothing leaves the bowl, nothing is lost, a wedged tier-8 plug is lifted. Visual QA
   `tools/dev/shots_shake.tscn`. Bot probe uses it when the water rises.
+* **Cascade rewards (1.0.1, `cascade` config, `Game._cascade_feedback`)**: audiovisual only. chain >= 2: `Sfx.combo` pling one
+  pentatonic step higher per merge. Triple: own message/burst/arpeggio/kick/buzz. Levels `from` 3/5/8: entering a level shows one of
+  its texts in the HUD combo label (`Hud.combo`, ONE label updated in place: never stacked messages), adds camera `trauma`
+  (offset = max_shake·trauma², decays at trauma_decay/s: never continuous), bursts particles (`Fx.burst`, capped MAX_SPARKS),
+  `Game.haptic` (Input.vibrate_handheld on mobile; export preset has VIBRATE), the level's Sonilo sting; `celebrate` = confetti +
+  screen flash. Later merges in the same level: count up + smaller kicks. The camera = `hand_cam_offset/rot` (ShakeHand) + kicks,
+  composed in `Game._process`. Combo texts live in config (extract_strings reads them). `test_cascade_feedback`.
+* **Progress + LEVEL SELECT (1.0.1)**: `Game.progress_of(save)` = {unlocked, completed[ids]}; a pre-1.0.1 save has only
+  `unlocked` → every level before it counts as completed. `Game.level_unlocked(save, i)`: first level, reached, or previous
+  completed (DEV MODE: all). `_level_done` saves completion (never in DEV MODE). `LevelSelect` (on the title's CanvasLayer) draws
+  cards: thumbnail (`ui/thumb_<id>.jpg`, made by `build_assets.py ui`), number, name, tagline, objects found (save.seen), final
+  object (silhouette + "?" until completed), padlock / done badge (Layer icons). Control gotcha: under a CanvasLayer use
+  `set_anchors_and_offsets_preset` (plain set_anchors_preset left it 0x0).
+* **Title on any screen (1.0.1)**: `ui/title_bg_tall.jpg` = the original art outpainted to 1080x2560 (original at y 0..1920 of design
+  space); `Title.cover_scale(art, visible_rect)` enlarges it around (540, 960) only when the visible area is wider/taller than the
+  art (tablets). `Hud.fit_safe_area(control)` (mobile only) insets full-screen UI by the display safe area.
+* **Finale (1.0.1)**: levels.json `finale` {bg_earth [x,y,r], bg_space [x,y], shake} on the last location. During its royal flush
+  `trauma` is held up to `shake` (everything shakes), `Backdrop.earth_gone` 0→1 swaps the painted Earth for empty space while a
+  copy spins and shrinks; VICTORY panel = fade to black → royal message → NEW GAME? (`Game.new_game`, a fresh run) / MENU.
 * **Earned flush / chain:** `Game.add_meter` (per_merge + tier_bonus·(t−2)) × chain_mult (+ triple_bonus); chain uses SIMULATION time.
 * **Royal flush unlock:** creating the max tier → `State.ROYAL_READY` (water `frozen`, overflow ignored, launcher off; merges still
   run). When no merge happened for `royal.settle` s, `royal_armed` → the grand-reveal card (`Showcase.reveal`) + the FLUSH button
@@ -211,7 +249,9 @@ godot --headless --path . --fixed-fps 60 tests/run_tests.tscn                   
 godot --headless --path . --fixed-fps 60 tests/drain_probe.tscn -- --level=1 --tiers=1,4,9 [--x=580]   # flush trace per tier
 godot --headless --path . --fixed-fps 60 tests/bot_probe.tscn -- --games=2 --cap=900 --start=0 --policy=conservative|aggressive|flusher|holdout
 xvfb-run -a -s "-screen 0 1280x1024x24" godot --path . --rendering-driver opengl3 --resolution 540x960 tools/dev/shots.tscn   # screenshots -> tools/dev/out
-                                                 # (also shots_ui.tscn, shots_cards.tscn = PoC 4 cards, shots_shake.tscn = TOILET SHAKE)
+                                                 # (also shots_ui.tscn, shots_cards.tscn = PoC 4 cards, shots_shake.tscn = TOILET SHAKE,
+                                                 # shots_101.tscn = level select, new levels, cascade, finale; `-- --only=title` with
+                                                 # --resolution 540x1170 / 540x1200 checks the title on 19.5:9 / 20:9)
 godot --path .                                   # play (mouse = touch). Keys: F/Space flush, R retry level, F1 collision debug;
                                                  # debug builds: 1-9 drop tier at mouse, C +1 flush charge, L next level
 ```
@@ -237,6 +277,14 @@ Re-run the bot probe after ANY tuning change. Android: `tools/ci/setup_godot.sh 
 * PoC 3.1: game logo (`ui/game_logo.png`, 2.55 CU, high quality for the lettering: it came out lowercase "flush royale", kept) and
   title key art (`ui/title_bg.jpg`, 2.16 CU). `build_assets.py ui()` also builds the boot splash from `Studio_Logo.png`.
   Godot gotcha: never `load()` a texture inside `_draw()` - it is freed before rendering (white screen); keep it in a member.
+* **1.0.1 (40.5 CU)**: 4 backgrounds + 2 rejected Earth tries (6 x 2.16), 4 object sheets + 2 redraws (6 x 3.83), tall title
+  outpaint (2.87, transparent-mask inpainting keeps the original pixels), UI icon sheet (1.7). Total all versions 87.3 CU.
+  Lessons: (1) Vatican/Hollywood/Earth funnels came out narrow → `CARVE` all new levels; Earth ignored the guide twice (goblet
+  shape) → used an already-correct painted background (White House) as init_image and only restyled it: worked first time.
+  (2) Ask for NO glows/beams on objects (they become collision). (3) Check sheets for real-brand imitation (a monogram handbag was
+  redrawn). (4) `chroma.key_magenta` now keeps pink/purple paint that is ENCLOSED by an object's outline (hot pink was keyed
+  semi-transparent); enclosed pure magenta (a wheel's hole) still keys out. Only the new levels were rebuilt.
+  `build_assets.py levels <ids>` rebuilds just those; `build_assets.py ui` = logo, title (+tall), icons, thumbnails, splash.
 * Pipeline: `python3 tools/asset_pipeline/build_assets.py` (needs pillow numpy scipy).
 
 ## 7. Conventions
@@ -253,5 +301,5 @@ constants. Keep it small: no premature abstractions, one script per system.
 * Squeeze-through squash is visual (sprite in world x); collision keeps its shape while it ignores the drain walls.
 
 ## 9. Intentionally out of scope
-Settings menu, achievements, ads, store, background music, more power-ups (TOILET SHAKE is the first bonus), dialogue system / cutscenes / story framework (PoC 4 cards
+Settings menu, achievements, ads, store, accounts / online, background music, more power-ups (TOILET SHAKE is the first bonus), dialogue system / cutscenes / story framework (PoC 4 cards
 are the whole "story"), more than 9 tiers, soft bodies, real fluid simulation.

@@ -23,7 +23,9 @@ MAX_EDGE = 360
 
 BACKGROUNDS = {"bathroom": "bowl_background_raw.png", "kitchen": "bowl_background_kitchen_raw.png",
                "palace": "bowl_background_palace_raw.png", "dorm": "bowl_background_dorm_raw.png",
-               "whitehouse": "bowl_background_whitehouse_raw.png", "royal": "bowl_background_royal_raw.png"}
+               "whitehouse": "bowl_background_whitehouse_raw.png", "royal": "bowl_background_royal_raw.png",
+               "area51": "bowl_background_area51_raw.png", "vatican": "bowl_background_vatican_raw.png",
+               "hollywood": "bowl_background_hollywood_raw.png", "earth": "bowl_background_earth_raw.png"}
 
 
 def grid_cells(path, cols, rows):
@@ -65,7 +67,8 @@ def save(img, level, tier):
     print(level, tier, img.size)
 
 
-CARVE = {"royal"}      # backgrounds whose painted bowl walls bulge into the physics interior (see carve())
+SPLASH_BLUE = (30, 100, 210)       # brand blue: boot splash canvas, project boot_splash/bg_color + clear colour
+CARVE = {"royal", "area51", "vatican", "hollywood", "earth"}      # backgrounds whose painted bowl walls bulge into the physics interior (see carve())
 
 
 def carve(img):
@@ -127,9 +130,20 @@ def objects():
     extra = grid_cells("bathroom_extra_raw.png", 3, 1)
     for t, img in enumerate(first[:5] + extra + [first[5]]):
         save(img, "bathroom", t + 1)
-    for level in ("kitchen", "palace", "dorm", "whitehouse", "royal"):
+    for level in ("kitchen", "palace", "dorm", "whitehouse", "royal", "area51", "vatican", "hollywood", "earth"):
+        if not os.path.exists(os.path.join(SRC, "%s_sheet_raw.png" % level)):
+            continue
         for t, img in enumerate(grid_cells("%s_sheet_raw.png" % level, 3, 3)):
             save(img, level, t + 1)
+
+
+def thumbs(d):
+    """Level-select card previews: the top of each room (y 20..450 of the 1080x1920 background), 640 wide."""
+    for level in BACKGROUNDS:
+        p = os.path.join(OUT, "bg_%s.jpg" % level)
+        if os.path.exists(p):
+            img = Image.open(p).convert("RGB").crop((0, 20, 1080, 450)).resize((640, 255), Image.LANCZOS)
+            img.save(os.path.join(d, "thumb_%s.jpg" % level), quality=85)
 
 
 def ui():
@@ -145,6 +159,18 @@ def ui():
     bg = os.path.join(SRC, "title_bg_raw.png")
     if os.path.exists(bg):
         Image.open(bg).convert("RGB").resize((1080, 1920), Image.LANCZOS).save(os.path.join(d, "title_bg.jpg"), quality=88)
+    tall = os.path.join(SRC, "title_bg_tall_raw.png")     # 1.0.1: the same art outpainted to 9:21 (tall phones)
+    if os.path.exists(tall):                              # 1080x2560: the original 1080x1920 sits at y 320..2240
+        Image.open(tall).convert("RGB").resize((1080, 2560), Image.LANCZOS).save(os.path.join(d, "title_bg_tall.jpg"), quality=88)
+    icons = os.path.join(SRC, "ui_icons_raw.png")         # 2x2: padlock, done badge, plunger, crown
+    if os.path.exists(icons):
+        for name, img in zip(("icon_lock", "icon_done", "icon_plunger", "icon_crown"), grid_cells("ui_icons_raw.png", 2, 2)):
+            img = trim(img, pad=2)
+            if max(img.size) > 256:
+                k = 256 / max(img.size)
+                img = img.resize((round(img.width * k), round(img.height * k)), Image.LANCZOS)
+            img.save(os.path.join(d, name + ".png"))
+            print(name, img.size)
     hands = os.path.join(SRC, "hand_sheet_raw.png")     # TOILET SHAKE hand: left half open, right half gripping
     if os.path.exists(hands):
         sheet = key_magenta(Image.open(hands))
@@ -153,13 +179,14 @@ def ui():
             img = trim(sheet.crop(box), pad=2)
             img.save(os.path.join(d, name + ".png"))
             print(name, img.size)
+    thumbs(d)
     studio = os.path.join(G.ROOT, "Studio_Logo.png")
     if os.path.exists(studio):
         art = Image.open(studio).convert("RGBA")
         art = art.crop(art.getchannel("A").point(lambda a: 255 if a > 24 else 0).getbbox())
         w = 860
         art = art.resize((w, round(art.height * w / art.width)), Image.LANCZOS)
-        canvas = Image.new("RGBA", (1080, 1920), (255, 255, 255, 255))
+        canvas = Image.new("RGBA", (1080, 1920), SPLASH_BLUE + (255,))   # 1.0.1: blue, = project boot_splash/bg_color
         canvas.alpha_composite(art, ((1080 - art.width) // 2, (1920 - art.height) // 2 - 60))
         canvas.convert("RGB").save(os.path.join(d, "splash_wrong_button.png"))
         print("splash", art.size, "on 1080x1920")
@@ -170,6 +197,15 @@ if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     if sys.argv[1:] == ["ui"]:          # only the UI images (fast, leaves the level art untouched)
         ui()
+        sys.exit(0)
+    if sys.argv[1:2] == ["levels"]:     # only these levels: build_assets.py levels area51 earth ...
+        want = set(sys.argv[2:])
+        BACKGROUNDS = {k: v for k, v in BACKGROUNDS.items() if k in want}
+        backgrounds()
+        for level in want:
+            if os.path.exists(os.path.join(SRC, "%s_sheet_raw.png" % level)):
+                for t, img in enumerate(grid_cells("%s_sheet_raw.png" % level, 3, 3)):
+                    save(img, level, t + 1)
         sys.exit(0)
     backgrounds()
     objects()

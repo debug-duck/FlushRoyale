@@ -131,12 +131,8 @@ func _shake(dt: float) -> void:
 	_camera(Vector2(sin(_t * w) * cs, absf(sin(_t * w * 2.0)) * cs * -0.5) * env, sin(_t * w) * float(_cfg.camera_tilt) * env)
 
 func _camera(off: Vector2, rot: float) -> void:
-	var cam: Camera2D = game.camera
-	if not cam:
-		return
-	cam.ignore_rotation = false
-	cam.offset = off
-	cam.rotation = rot
+	game.hand_cam_offset = off          # Game combines it with the cascade camera kicks
+	game.hand_cam_rot = rot
 
 ## Stop-motion: the hand only moves on 12 fps steps (cut-out animation), snapping between poses.
 func _update_visual(dt: float) -> void:

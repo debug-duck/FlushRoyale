@@ -5,6 +5,7 @@
 
 Sources (exact, no guessing):
 * data/levels.json (played levels): every level `name`, `tagline`, `royal_message` and every tier `name`, `intro`, `reveal` (PoC 4 cards);
+* data/config.json `cascade` texts (1.0.1 combo messages);
 * game/**/*.gd: every string literal passed straight to Loc.t("...").
 Rule for code: show text only through Loc.t("..."), translate a FORMAT and fill it afterwards (Loc.t("CHAIN x%d") % n),
 never glue translated pieces together.
@@ -36,6 +37,10 @@ def collect():
             for k in ("intro", "reveal"):
                 if t.get(k):
                     found.add(t[k])
+    cas = json.loads((ROOT / "data" / "config.json").read_text(encoding="utf-8")).get("cascade", {})   # 1.0.1 combo texts
+    for group in [cas.get("triple", {})] + cas.get("levels", []):
+        for t in group.get("texts", []):
+            found.add(t)
     for p in sorted((ROOT / "game").rglob("*.gd")):
         for m in LOC_CALL.finditer(p.read_text(encoding="utf-8")):
             found.add(m.group(1).replace("\\n", "\n").replace('\\"', '"'))

@@ -28,11 +28,13 @@ func _ready() -> void:
 	await test_resting_matches_merge()
 	await test_toilet_shake()
 	await test_chain()
+	await test_cascade_feedback()
 	await test_royal_flush_and_levels()
 	await test_rising_water()
 	await test_natural_clear()
 	await test_emergency_flush_sacrifice()
 	await test_title_and_dev_mode()
+	await test_level_select_and_progress()
 	await test_showcase()
 	test_localisation()
 	test_project_and_export()
@@ -118,12 +120,20 @@ func test_data_and_geometry() -> void:
 		ok(Cfg.c.has(k), "config section " + k)
 
 func test_tiers_and_spawning() -> void:
-	ok(Cfg.level_count() == 3, "three levels")
+	ok(Cfg.level_count() == 7, "seven locations (1.0.1)")
+	var order := []
+	for lv in Cfg.levels:
+		order.append(lv.id)
+	ok(order == ["dorm", "whitehouse", "royal", "area51", "vatican", "hollywood", "earth"], "play order: %s" % str(order))
+	ok(Cfg.levels[-1].get("finale", null) is Dictionary, "the last location is the finale")
 	for lv in Cfg.level_count():
 		Cfg.set_level(lv)
 		var id := Cfg.level_id()
 		ok(Cfg.max_tier() == 9, "%s has nine tiers" % id)
 		ok(ResourceLoader.exists("res://assets/processed/" + str(Cfg.level_def().background)), "%s background exists" % id)
+		ok(ResourceLoader.exists("res://assets/processed/ui/thumb_%s.jpg" % id), "%s level-select thumbnail exists" % id)
+		for k in ["name", "tagline", "royal_message"]:
+			ok(str(Cfg.level_def().get(k, "")) != "", "%s has a %s" % [id, k])
 		var prev_area := 0.0
 		var names := {}
 		for t in range(1, 10):
@@ -132,6 +142,7 @@ func test_tiers_and_spawning() -> void:
 			ok(o.area > prev_area * 1.3, "%s tier %d bigger than tier %d" % [id, t, t - 1])
 			ok(o.samples.size() >= 20, "%s tier %d has buoyancy samples" % [id, t])
 			ok(o.sprite != null, "%s tier %d has its Layer sprite" % [id, t])
+			ok(o.get_child_count() > 0 and o.hull.size() >= 3, "%s tier %d has collision shapes" % [id, t])
 			names[o.def.name] = true
 			prev_area = o.area
 			o.free()
@@ -490,9 +501,10 @@ func test_resting_matches_merge() -> void:
 	var leftovers := 0
 	for run in 3:
 		await new_game(false, 1)
-		seed(77 + run)
+		var r := RandomNumberGenerator.new()
+		r.seed = 77 + run
 		for i in 36:
-			game.make_object(1 + randi() % 6, Vector2(randf_range(250, 830), randf_range(500, 900)))
+			game.make_object(1 + r.randi() % 6, Vector2(r.randf_range(250, 830), r.randf_range(500, 900)))
 			await step(4)
 		await seconds(6.0)
 		var objs := game.objects.filter(func(o): return not o.merging)
@@ -516,9 +528,10 @@ func test_toilet_shake() -> void:
 	ok(game.shake_charges == 1, "a shake is earned after %d merges" % need)
 	# a crowded bowl, settled: every object must get shaken
 	await new_game(false, 1)
-	seed(5)
+	var r := RandomNumberGenerator.new()      # own generator: effects elsewhere draw from the global one
+	r.seed = 5
 	for i in 26:
-		game.make_object(1 + randi() % 6, Vector2(randf_range(250, 830), randf_range(520, 900)))
+		game.make_object(1 + r.randi() % 5, Vector2(r.randf_range(250, 830), r.randf_range(520, 900)))
 		await step(4)
 	await seconds(5.0)
 	var before := game.objects.duplicate()
@@ -558,6 +571,40 @@ func test_toilet_shake() -> void:
 		top = minf(top, monster.global_position.y)
 	ok(y0 - top >= 120.0, "the shake knocks the plug loose (lifted %.0f px)" % (y0 - top))
 
+## 1.0.1 cascade rewards: escalating feedback per cascade level, a lone triple is recognised, effects never pause or slow
+## the game, the camera kick decays, and there is only ever one combo label.
+func test_cascade_feedback() -> void:
+	await new_game(false, 0)
+	var cc: Dictionary = Cfg.c.cascade
+	var levels: Array = cc.levels
+	var p := Vector2(540, 1000)
+	game._score_merge(2, p, 30.0, false)
+	ok(game.hud._combo_text == "" and game.trauma == 0.0, "a single merge: just the existing pop")
+	game._score_merge(2, p, 30.0, false)
+	ok(game.hud._combo_text == "" and game.haptics_log.is_empty(), "chain 2: only the rising pling")
+	var seen_levels := []
+	for n in range(3, 10):
+		game._score_merge(2, p, 30.0, false)
+		for i in levels.size():
+			if n == int(levels[i].from):
+				seen_levels.append(i)
+				ok((levels[i].texts as Array).has(game.hud._combo_text), "chain %d shows a level-%d message (%s)" % [n, i, game.hud._combo_text])
+				ok(game.haptics_log[-1] == int(levels[i].haptic_ms), "chain %d buzzes %d ms" % [n, int(levels[i].haptic_ms)])
+	ok(seen_levels == [0, 1, 2], "short, large and exceptional cascades are told apart")
+	ok(game.hud._combo_n == 9, "the label counts the merges (x%d)" % game.hud._combo_n)
+	ok(game.fx.sparks.size() > 60, "an exceptional cascade throws confetti and sparks (%d)" % game.fx.sparks.size())
+	ok(game.hud._screen_flash_t < 0.1, "...and flashes the screen")
+	ok(game.trauma > 0.5, "...and kicks the camera (trauma %.2f)" % game.trauma)
+	ok(not get_tree().paused and is_equal_approx(Engine.time_scale, 1.0), "effects never pause or slow the game")
+	await seconds(1.2)
+	ok(game.trauma == 0.0 and game.camera.offset.length() < 0.5, "the camera kick is brief (offset %.1f)" % game.camera.offset.length())
+	# a lone triple, long after the cascade
+	game._sim_t += 10.0
+	var n_h := game.haptics_log.size()
+	game._score_merge(3, p, 40.0, true)
+	ok(game.chain == 1 and (cc.triple.texts as Array).has(game.hud._combo_text), "a lone triple gets its own message (%s)" % game.hud._combo_text)
+	ok(game.haptics_log.size() == n_h + 1 and game.trauma > 0.0, "...a buzz and a small kick")
+
 func test_chain() -> void:
 	await new_game()
 	var x := game.make_object(1, Vector2(300, 1000))
@@ -583,7 +630,7 @@ func test_chain() -> void:
 	ok(game.chain == 1, "the chain resets after the window")
 
 func test_royal_flush_and_levels() -> void:
-	for lv in 3:
+	for lv in Cfg.level_count():
 		await new_game(false, lv)
 		ok(game.discovered.size() == 3, "%s: the three spawn tiers are known at the start" % Cfg.level_id())
 		for t in [1, 2, 3, 2, 1]:
@@ -614,11 +661,16 @@ func test_royal_flush_and_levels() -> void:
 		ok(game.request_flush() and game.state == Game.State.ROYAL, "%s: the player triggers the ROYAL FLUSH" % Cfg.level_id())
 		ok(not game.launcher.enabled, "no throwing during the royal flush")
 		var done := false
+		var max_trauma := 0.0
 		for i in 60 * 20:
 			await get_tree().physics_frame
+			max_trauma = maxf(max_trauma, game.trauma)
 			if game.state != Game.State.ROYAL:
 				done = true
 				break
+		if game.is_finale():
+			ok(max_trauma >= 0.5, "finale: the whole toilet shakes (trauma %.2f)" % max_trauma)
+			ok(game.backdrop.earth_gone >= 1.0, "finale: the Earth disappears from the sky")
 		ok(done, "%s: the royal flush ends" % Cfg.level_id())
 		ok(game.objects.is_empty(), "%s: the royal flush empties the bowl (%d left)" % [Cfg.level_id(), game.objects.size()])
 		ok(game.score - before >= Cfg.flush_points(9) * int(Cfg.c.royal.multiplier), "%s: royal flush pays x%d (%d)" % [Cfg.level_id(), Cfg.c.royal.multiplier, game.score - before])
@@ -626,16 +678,18 @@ func test_royal_flush_and_levels() -> void:
 		near(Engine.time_scale, 1.0, 0.001, "slow motion is over")
 		ok(game.hud.restart_button.visible, "%s: end panel shown" % Cfg.level_id())
 		var score := game.score
-		if lv < 2:
+		if lv < Cfg.level_count() - 1:
 			ok(game.state == Game.State.LEVEL_DONE, "%s: level complete" % Cfg.level_id())
 			ok(game.hud.restart_button.text == "NEXT LEVEL", "button says NEXT LEVEL")
 			game._on_panel_button()
 			ok(Game.carry.get("level", -1) == lv + 1 and Game.carry.get("score", -1) == score, "NEXT LEVEL carries the score into level %d" % (lv + 2))
 		else:
 			ok(game.state == Game.State.VICTORY, "last level: victory")
-			ok(game.hud.restart_button.text == "PLAY AGAIN", "button says PLAY AGAIN")
+			ok(game.is_finale(), "the last location is the finale")
+			ok(game.hud.restart_button.text == "NEW GAME", "finale: NEW GAME? (button %s)" % game.hud.restart_button.text)
+			ok(game.hud.menu_button.visible, "finale: MENU is offered too")
 			game._on_panel_button()
-			ok(Game.carry.is_empty(), "PLAY AGAIN starts a fresh run")
+			ok(Game.carry.is_empty(), "NEW GAME starts a fresh run from the first location")
 	# game over -> retry the same level with the score it started with
 	await new_game(false, 1)
 	game.score = 500
@@ -948,6 +1002,76 @@ func test_showcase() -> void:
 		ok(swallowed > 0, "%s: the pieces end up in the drain" % Cfg.level_id())
 		ok(gone and not level_while_card, "%s: the level transition waits for the card" % Cfg.level_id())
 		ok(game.state == Game.State.LEVEL_DONE or game.state == Game.State.VICTORY, "%s: then the level is complete" % Cfg.level_id())
+
+## 1.0.1: LEVEL SELECT + progress (unlock after completing the previous location, completion saved, pre-1.0.1 saves keep
+## working), the title art covers tall phones, the blue boot splash, the version.
+func test_level_select_and_progress() -> void:
+	Game.dev = false
+	var p0 := Game.progress_of({})
+	ok(p0.unlocked == 0 and p0.completed.is_empty(), "fresh save: nothing completed")
+	var old := {"best": 1234, "seen": {"dorm": 9}, "unlocked": 2}      # a PoC 3.1 - 4.1 save
+	var po := Game.progress_of(old)
+	ok(po.completed == ["dorm", "whitehouse"], "old save: the levels before CONTINUE count as completed (%s)" % str(po.completed))
+	ok(Game.level_unlocked(old, 2) and not Game.level_unlocked(old, 3), "old save: level 3 open, level 4 locked")
+	var new_save := {"unlocked": 0, "completed": ["dorm"]}
+	ok(Game.level_unlocked(new_save, 1) and not Game.level_unlocked(new_save, 2), "completing a location unlocks the next one")
+	Game.dev = true
+	ok(Game.level_unlocked({}, 6), "DEV MODE opens every location")
+	Game.dev = false
+	# completing a location in the game saves it
+	await new_game(false, 3)
+	game._level_done()
+	ok(game._save.completed.has("area51") and int(game._save.unlocked) == 4, "completing AREA 51 saves it and unlocks THE VATICAN")
+	ok(game.state == Game.State.LEVEL_DONE and game.hud.menu_button.visible, "end panel offers MENU")
+	ok(not game.hud.flush_button.visible and not game.hud.shake_button.visible, "no gameplay buttons over the end panel")
+	await new_game(false, 2)
+	Game.dev = true
+	game._level_done()
+	Game.dev = false
+	ok(not game._save.has("completed"), "DEV MODE completions are not saved")
+	# the screen itself
+	var title: Title = load("res://game/ui/title.tscn").instantiate()
+	title.change_scenes = false
+	add_child(title)
+	await step(3)
+	title.save = {"unlocked": 1, "completed": ["dorm"]}
+	ok(title.levels_button != null and title.levels_button.visible, "the title has a LEVELS button")
+	title.open_levels()
+	await step(3)
+	var ls := title.level_select
+	ok(ls != null and ls.cards.size() == Cfg.level_count(), "one card per location (%d)" % (ls.cards.size() if ls else 0))
+	ok(ls.size.x > 500 and ls.size.y > 900, "the level select fills the screen (%s)" % str(ls.size))
+	var picked := []
+	ls.chosen.connect(func(i): picked.append(i))
+	ls._pick(4)
+	ok(picked.is_empty(), "a locked location cannot be started")
+	ls._pick(1)
+	ok(picked == [1], "an unlocked location starts")
+	ok(ls.completed(0) and not ls.completed(1), "completed locations are marked")
+	ls.back.emit()
+	await step(2)
+	ok(title.level_select == null, "BACK returns to the menu")
+	title.queue_free()
+	# title art covers 16:9 .. 21:9 without stretching
+	var art := Rect2(0, -320, 1080, 2560)
+	for vis in [Rect2(0, 0, 1080, 1920), Rect2(0, -210, 1080, 2340), Rect2(0, -240, 1080, 2400), Rect2(0, -300, 1080, 2520)]:
+		near(Title.cover_scale(art, vis), 1.0, 0.001, "the tall title art covers %dx%d unscaled" % [vis.size.x, vis.size.y])
+	var tab := Rect2(-180, 0, 1440, 1920)              # a 3:4 tablet: wider than the art
+	var k := Title.cover_scale(art, tab)
+	var c := Vector2(540, 960)
+	var scaled := Rect2(c + (art.position - c) * k, art.size * k)
+	ok(scaled.encloses(tab), "on a wide screen the art is enlarged (x%.2f) until it covers" % k)
+	# blue boot splash, no border mismatch
+	var bg: Color = ProjectSettings.get_setting("application/boot_splash/bg_color")
+	ok(bg.b > 0.7 and bg.r < 0.3, "boot splash background is blue")
+	var img: Image = (load(str(ProjectSettings.get_setting("application/boot_splash/image"))) as Texture2D).get_image()
+	var corner := img.get_pixel(2, 2)
+	ok(absf(corner.r - bg.r) < 0.03 and absf(corner.g - bg.g) < 0.03 and absf(corner.b - bg.b) < 0.03, "splash canvas = splash background colour (no borders)")
+	var clear: Color = ProjectSettings.get_setting("rendering/environment/defaults/default_clear_color")
+	ok(clear.is_equal_approx(bg), "clear colour = splash blue (no flash between splash and title)")
+	ok(Game.version() == "1.0.1", "version 1.0.1")
+	var ep := FileAccess.get_file_as_string("res://export_presets.cfg")
+	ok(ep.contains("version/name=\"1.0.1\"") and ep.contains("permissions/vibrate=true"), "Android: version 1.0.1, VIBRATE for haptics")
 
 func test_project_and_export() -> void:
 	ok(ProjectSettings.get_setting("display/window/handheld/orientation") == 1, "portrait orientation")

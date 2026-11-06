@@ -236,6 +236,379 @@
      "sprite": "levels/royal/tier_9.png"
     }
    ]
+  },
+  {
+   "id": "area51",
+   "name": "AREA 51",
+   "tagline": "The Truth Is Down There",
+   "royal_message": "THE TRUTH HAS BEEN FLUSHED!",
+   "background": "bg_area51.jpg",
+   "spawn_weights": [
+    45,
+    35,
+    20
+   ],
+   "tiers": [
+    {
+     "name": "Tinfoil Hat",
+     "density": 0.35,
+     "color": "c8ccd4",
+     "bounce": 0.25,
+     "intro": "Blocks 5G, mind control and, sadly, all common sense.",
+     "_why": "light foil: floats",
+     "sprite": "levels/area51/tier_1.png"
+    },
+    {
+     "name": "Tiny UFO",
+     "density": 0.6,
+     "color": "7fd6ff",
+     "bounce": 0.35,
+     "_why": "bouncy little saucer",
+     "sprite": "levels/area51/tier_2.png"
+    },
+    {
+     "name": "Alien Egg",
+     "density": 1.1,
+     "color": "9be33c",
+     "friction": 0.06,
+     "_why": "slimy: slides everywhere",
+     "sprite": "levels/area51/tier_3.png"
+    },
+    {
+     "name": "Ray Gun",
+     "density": 1.3,
+     "color": "ff5a3c",
+     "_why": "angular",
+     "sprite": "levels/area51/tier_4.png"
+    },
+    {
+     "name": "Abducted Cow",
+     "density": 0.9,
+     "color": "f4f4f4",
+     "friction": 0.6,
+     "intro": "They travelled 40 light-years for THIS?",
+     "_why": "awkward shape, tumbles",
+     "sprite": "levels/area51/tier_5.png"
+    },
+    {
+     "name": "Alien in a Jar",
+     "density": 2.2,
+     "color": "6be3a0",
+     "friction": 0.15,
+     "intro": "Do not open. Do not tap the glass. Do not make eye contact.",
+     "_why": "heavy glass: sinks fast, slippery",
+     "sprite": "levels/area51/tier_6.png"
+    },
+    {
+     "name": "Bigfoot",
+     "density": 1.0,
+     "color": "8a5a3a",
+     "friction": 0.85,
+     "intro": "Officially does not exist. Neither does this bathroom.",
+     "_why": "furry: grippy",
+     "sprite": "levels/area51/tier_7.png"
+    },
+    {
+     "name": "Flying Saucer",
+     "density": 0.7,
+     "color": "a8b4c8",
+     "bounce": 0.2,
+     "_why": "wide and light: floats flat",
+     "sprite": "levels/area51/tier_8.png"
+    },
+    {
+     "name": "The Mothership",
+     "density": 1.3,
+     "color": "46e08a",
+     "reveal": "THE TRUTH IS OUT THERE. THE EVIDENCE IS DOWN HERE.",
+     "sprite": "levels/area51/tier_9.png"
+    }
+   ]
+  },
+  {
+   "id": "vatican",
+   "name": "THE VATICAN",
+   "tagline": "Holy Shit",
+   "royal_message": "LET THERE BE FLUSH!",
+   "background": "bg_vatican.jpg",
+   "spawn_weights": [
+    45,
+    35,
+    20
+   ],
+   "tiers": [
+    {
+     "name": "Holy Candle",
+     "density": 0.85,
+     "color": "fff2c4",
+     "_why": "wax: barely floats",
+     "sprite": "levels/vatican/tier_1.png"
+    },
+    {
+     "name": "Rosary",
+     "density": 1.2,
+     "color": "8a5a3a",
+     "friction": 0.7,
+     "sprite": "levels/vatican/tier_2.png"
+    },
+    {
+     "name": "Communion Chalice",
+     "density": 1.8,
+     "color": "ffcc33",
+     "friction": 0.2,
+     "_why": "solid gold: sinks",
+     "sprite": "levels/vatican/tier_3.png"
+    },
+    {
+     "name": "Holy Bible",
+     "density": 1.4,
+     "color": "7a2a2a",
+     "_why": "thick and heavy",
+     "sprite": "levels/vatican/tier_4.png"
+    },
+    {
+     "name": "Cherub",
+     "density": 0.45,
+     "color": "ffd0b0",
+     "bounce": 0.3,
+     "intro": "Even angels have to go.",
+     "_why": "buoyant: floats like a cloud",
+     "sprite": "levels/vatican/tier_5.png"
+    },
+    {
+     "name": "Bishop's Mitre",
+     "density": 0.6,
+     "color": "f2f2f2",
+     "intro": "Adds 40 cm of holiness. Doorframes fear it.",
+     "_why": "tall and light: topples",
+     "sprite": "levels/vatican/tier_6.png"
+    },
+    {
+     "name": "Popemobile",
+     "density": 1.35,
+     "color": "f8f8f8",
+     "friction": 0.5,
+     "intro": "Bulletproof. Waterproof? Let us pray.",
+     "_why": "boxy, heavy",
+     "sprite": "levels/vatican/tier_7.png"
+    },
+    {
+     "name": "Papal Tiara",
+     "density": 1.6,
+     "color": "ffd84a",
+     "intro": "Three crowns, one head. The math is a mystery of faith.",
+     "sprite": "levels/vatican/tier_8.png"
+    },
+    {
+     "name": "St. Peter's Basilica",
+     "density": 1.5,
+     "color": "f0e0c0",
+     "reveal": "AND ON THE EIGHTH DAY, GOD INVENTED PLUMBING.",
+     "sprite": "levels/vatican/tier_9.png"
+    }
+   ]
+  },
+  {
+   "id": "hollywood",
+   "name": "HOLLYWOOD",
+   "tagline": "Flush, Camera, Action!",
+   "royal_message": "AND THE AWARD GOES TO... THE SEWER!",
+   "background": "bg_hollywood.jpg",
+   "spawn_weights": [
+    45,
+    35,
+    20
+   ],
+   "tiers": [
+    {
+     "name": "Lipstick",
+     "density": 1.1,
+     "color": "e8204a",
+     "friction": 0.3,
+     "sprite": "levels/hollywood/tier_1.png"
+    },
+    {
+     "name": "Designer Sunglasses",
+     "density": 0.7,
+     "color": "333344",
+     "bounce": 0.25,
+     "sprite": "levels/hollywood/tier_2.png"
+    },
+    {
+     "name": "Golden Movie Trophy",
+     "density": 1.9,
+     "color": "ffcc33",
+     "intro": "Best Performance by an Object in a Toilet.",
+     "_why": "solid gold: sinks",
+     "sprite": "levels/hollywood/tier_3.png"
+    },
+    {
+     "name": "Paparazzi Camera",
+     "density": 1.2,
+     "color": "444455",
+     "sprite": "levels/hollywood/tier_4.png"
+    },
+    {
+     "name": "Clapperboard",
+     "density": 0.8,
+     "color": "222222",
+     "intro": "Scene 1, take 847. And... FLUSH!",
+     "_why": "flat wood: floats",
+     "sprite": "levels/hollywood/tier_5.png"
+    },
+    {
+     "name": "Movie Camera",
+     "density": 1.7,
+     "color": "333333",
+     "friction": 0.5,
+     "_why": "dense and angular",
+     "sprite": "levels/hollywood/tier_6.png"
+    },
+    {
+     "name": "Chihuahua in a Handbag",
+     "density": 0.65,
+     "color": "ff7ab8",
+     "bounce": 0.3,
+     "intro": "Has its own agent. And a better contract than you.",
+     "_why": "light, bouncy",
+     "sprite": "levels/hollywood/tier_7.png"
+    },
+    {
+     "name": "Furious Movie Star",
+     "density": 1.0,
+     "color": "ffd84a",
+     "friction": 0.6,
+     "intro": "My agent specifically said NO underwater scenes!",
+     "sprite": "levels/hollywood/tier_8.png"
+    },
+    {
+     "name": "Entire Movie Studio",
+     "density": 1.4,
+     "color": "e8c070",
+     "reveal": "THAT'S A WRAP! The sequel is already in development.",
+     "sprite": "levels/hollywood/tier_9.png"
+    }
+   ]
+  },
+  {
+   "id": "earth",
+   "name": "PLANET EARTH",
+   "tagline": "Humanity's Greatest Achievement",
+   "royal_message": "WELL. THAT ESCALATED RATHER QUICKLY.",
+   "background": "bg_earth.jpg",
+   "spawn_weights": [
+    45,
+    35,
+    20
+   ],
+   "finale": {
+    "_doc": "The last location: the royal flush shakes everything harder, the painted Earth (bg_earth: centre x, y, radius in design px) spins away into the empty space at bg_space, then the screen fades to black: NEW GAME?",
+    "bg_earth": [
+     192,
+     163,
+     105
+    ],
+    "bg_space": [
+     410,
+     175
+    ],
+    "shake": 0.8
+   },
+   "tiers": [
+    {
+     "name": "The Wheel",
+     "density": 1.3,
+     "color": "9a8a70",
+     "friction": 0.7,
+     "intro": "Humanity's first great invention. Still the best one.",
+     "_why": "round stone: rolls",
+     "sprite": "levels/earth/tier_1.png",
+     "sprite_size": [
+      338,
+      340
+     ],
+     "shapes": [
+      {
+       "type": "circle",
+       "r": 160
+      }
+     ]
+    },
+    {
+     "name": "Ancient Scroll",
+     "density": 0.75,
+     "color": "e8d6a0",
+     "_why": "papyrus: floats",
+     "sprite": "levels/earth/tier_2.png"
+    },
+    {
+     "name": "Light Bulb",
+     "density": 0.55,
+     "color": "fff27a",
+     "friction": 0.1,
+     "bounce": 0.3,
+     "_why": "glass full of air: floats, slippery",
+     "sprite": "levels/earth/tier_3.png"
+    },
+    {
+     "name": "Television",
+     "density": 1.3,
+     "color": "7a5a3a",
+     "sprite": "levels/earth/tier_4.png"
+    },
+    {
+     "name": "Smartphone",
+     "density": 1.2,
+     "color": "333344",
+     "friction": 0.04,
+     "intro": "Contains all human knowledge. Used mostly for cat videos.",
+     "_why": "slippery",
+     "sprite": "levels/earth/tier_5.png"
+    },
+    {
+     "name": "AI Robot",
+     "density": 1.5,
+     "color": "b8c8d8",
+     "intro": "Humanity finally built something intelligent. It asked for a day off.",
+     "sprite": "levels/earth/tier_6.png"
+    },
+    {
+     "name": "Space Rocket",
+     "density": 0.9,
+     "color": "f2f2f2",
+     "bounce": 0.15,
+     "_why": "long and unstable",
+     "sprite": "levels/earth/tier_7.png"
+    },
+    {
+     "name": "Nuclear Warhead",
+     "density": 2.4,
+     "color": "6a7a5a",
+     "friction": 0.3,
+     "intro": "An impressive technological achievement. Terrible customer reviews.",
+     "_why": "very heavy: sinks and clogs",
+     "sprite": "levels/earth/tier_8.png"
+    },
+    {
+     "name": "Planet Earth",
+     "density": 1.0,
+     "color": "3a8ae0",
+     "friction": 0.3,
+     "reveal": "CONGRATULATIONS. YOU'VE FLUSHED HUMAN CIVILIZATION.",
+     "_why": "large and round: rolls",
+     "sprite": "levels/earth/tier_9.png",
+     "sprite_size": [
+      360,
+      360
+     ],
+     "shapes": [
+      {
+       "type": "circle",
+       "r": 168
+      }
+     ]
+    }
+   ]
   }
  ],
  "bonus_levels": [

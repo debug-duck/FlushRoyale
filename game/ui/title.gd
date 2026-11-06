@@ -3,17 +3,23 @@ extends Node2D
 ## Title screen: key art, the game logo (drops in, bobs, squashes when tapped), objects from every location spiralling into
 ## the toilet's whirlpool, PLAY / CONTINUE buttons and the best score. Tapping the logo 5x (taps < 1.2 s apart) toggles
 ## DEV MODE (Game.dev, not saved), as in RockRocketLaser.
+## 1.0.1: LEVELS opens the LEVEL SELECT (game/ui/level_select.gd). The key art is a 1080x2560 outpainted version of the
+## original (which sits at y 0..1920 of the design space): it covers tall phones (up to 21:9) without stretching, and
+## cover_scale() enlarges it around the composition's centre for anything taller or wider. UI respects the safe area.
 
 const GAME_SCENE := "res://game/main.tscn"
 const DRAIN := Vector2(540, 1395)          # whirlpool centre in the key art
 const STUDIO := "WRONG BUTTON STUDIO"      # a name: never translated
 const DEV_LABEL := "DEV"
+const STUDIO_LINE := "%s  v%s"             # studio name + version: not translated
 
 var change_scenes := true                  # tests turn this off
 var logo: Sprite2D
 var ui: CanvasLayer
 var play_button: Button
 var continue_button: Button
+var levels_button: Button
+var level_select: LevelSelect
 var save := {}
 var _t := 0.0
 var _logo_scale := 1.0
@@ -27,6 +33,8 @@ var _spawn_t := 0.0
 var _textures: Array[Texture2D] = []
 var _font: Font
 var _bg: Texture2D                         # held here: a texture loaded inside _draw() is freed before it renders
+var _bg_rect := Rect2(0, 0, 1080, 1920)    # where the key art goes in design space (tall art: Rect2(0, -320, 1080, 2560))
+const BRAND_BLUE := Color(0.1176, 0.3922, 0.8235)   # = boot splash / clear colour
 
 func _ready() -> void:
 	Engine.time_scale = 1.0
@@ -36,8 +44,13 @@ func _ready() -> void:
 	add_child(cam)
 	cam.make_current()
 	save = _load_save()
+	var tall := "res://assets/processed/ui/title_bg_tall.jpg"
 	var bgp := "res://assets/processed/ui/title_bg.jpg"
-	_bg = load(bgp) if ResourceLoader.exists(bgp) else null
+	if ResourceLoader.exists(tall):
+		_bg = load(tall)
+		_bg_rect = Rect2(0, -320, 1080, 2560)
+	elif ResourceLoader.exists(bgp):
+		_bg = load(bgp)
 	for lv in Cfg.levels:                  # decorative flyers: every object of every location
 		for t in lv.tiers:
 			var p := "res://assets/processed/" + str(t.sprite)
@@ -61,12 +74,15 @@ func _build_ui() -> void:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui.add_child(root)
-	play_button = _button(root, Loc.t("PLAY"), Color(0.98, 0.72, 0.12), 84, Rect2(-300, -520, 600, 170))
+	Hud.fit_safe_area(root)
+	play_button = _button(root, Loc.t("PLAY"), Color(0.98, 0.72, 0.12), 84, Rect2(-300, -640, 600, 170))
 	play_button.pressed.connect(func(): start(0))
-	var unlocked := int(save.get("unlocked", 0))
-	continue_button = _button(root, Loc.t("CONTINUE: LEVEL %d") % (unlocked + 1), Color(0.2, 0.62, 1.0), 48, Rect2(-300, -320, 600, 120))
+	var unlocked := int(Game.progress_of(save).unlocked)
+	continue_button = _button(root, Loc.t("CONTINUE: LEVEL %d") % (unlocked + 1), Color(0.2, 0.62, 1.0), 48, Rect2(-300, -445, 600, 120))
 	continue_button.visible = unlocked > 0 and unlocked < Cfg.level_count()
 	continue_button.pressed.connect(func(): start(unlocked))
+	levels_button = _button(root, Loc.t("LEVELS"), Color(0.55, 0.3, 0.85), 52, Rect2(-300, -300, 600, 120))
+	levels_button.pressed.connect(open_levels)
 	root.draw.connect(func(): _draw_ui(root))
 	set_meta("ui_root", root)
 
@@ -99,6 +115,44 @@ func _button(root: Control, text: String, col: Color, size: int, r: Rect2) -> Bu
 	root.add_child(b)
 	return b
 
+## LEVEL SELECT on top of the title (the title keeps animating behind it).
+func open_levels() -> void:
+	if level_select:
+		return
+	level_select = LevelSelect.new()
+	level_select.save = save
+	level_select.chosen.connect(start)
+	level_select.back.connect(close_levels)
+	ui.add_child(level_select)
+	Hud.fit_safe_area(level_select)
+	Sfx.play("whoosh", 1.0, -4.0)
+
+func close_levels() -> void:
+	if level_select:
+		level_select.queue_free()
+		level_select = null
+		Sfx.play("whoosh", 0.8, -6.0)
+
+## How much the key art (at `art` in design space) must be enlarged around the composition centre (540, 960) so that it
+## covers the visible area `vis` (never stretched: one factor for both axes; 1.0 when it already covers).
+static func cover_scale(art: Rect2, vis: Rect2) -> float:
+	var c := Vector2(540, 960)
+	var k := 1.0
+	if c.x - art.position.x > 0.0:
+		k = maxf(k, (c.x - vis.position.x) / (c.x - art.position.x))
+	if art.end.x - c.x > 0.0:
+		k = maxf(k, (vis.end.x - c.x) / (art.end.x - c.x))
+	if c.y - art.position.y > 0.0:
+		k = maxf(k, (c.y - vis.position.y) / (c.y - art.position.y))
+	if art.end.y - c.y > 0.0:
+		k = maxf(k, (vis.end.y - c.y) / (art.end.y - c.y))
+	return k
+
+## The visible part of the design space (the camera centres 1080x1920 on any aspect: canvas_items + expand).
+func visible_rect() -> Rect2:
+	var vs := get_viewport_rect().size
+	return Rect2(Vector2(540, 960) - vs * 0.5, vs)
+
 ## Start a run at `level` (0 = new game from the first location).
 func start(level: int) -> void:
 	Game.carry = {} if level <= 0 else {"level": level, "score": 0}
@@ -110,7 +164,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	var pos := Vector2.INF
 	if event is InputEventScreenTouch and event.pressed:
 		pos = get_canvas_transform().affine_inverse() * event.position
-	if pos == Vector2.INF:
+	if pos == Vector2.INF or level_select:
 		return
 	if logo.texture and Rect2(logo.position - logo.texture.get_size() * _logo_scale * 0.5, logo.texture.get_size() * _logo_scale).has_point(pos):
 		tap_logo()
@@ -158,9 +212,11 @@ func _process(dt: float) -> void:
 	root.queue_redraw()
 
 func _draw() -> void:
-	draw_rect(Rect2(-1200, -2000, 3480, 6000), Color(0.16, 0.36, 0.78))
+	draw_rect(Rect2(-1200, -2000, 3480, 6000), BRAND_BLUE)
 	if _bg:
-		draw_texture_rect(_bg, Rect2(0, 0, 1080, 1920), false)
+		var k := cover_scale(_bg_rect, visible_rect())
+		var c := Vector2(540, 960)
+		draw_texture_rect(_bg, Rect2(c + (_bg_rect.position - c) * k, _bg_rect.size * k), false)
 	for f in _flyers:
 		var k: float = f.t / f.life                 # 0 -> 1: spiral inward and shrink into the whirlpool
 		var r: float = f.r0 * (1.0 - k)
@@ -176,8 +232,9 @@ func _draw() -> void:
 func _draw_ui(root: Control) -> void:
 	var vs := root.size
 	var best := Loc.t("BEST %d") % int(save.get("best", 0))
-	_text(root, Vector2(vs.x * 0.5, vs.y - 140), best, 46, Color(1, 0.9, 0.5))
-	_text(root, Vector2(vs.x * 0.5, vs.y - 60), STUDIO, 30, Color(1, 1, 1, 0.75))
+	_text(root, Vector2(vs.x * 0.5, vs.y - 110), best, 46, Color(1, 0.9, 0.5))
+	var studio_line := STUDIO_LINE % [STUDIO, Game.version()]
+	_text(root, Vector2(vs.x * 0.5, vs.y - 45), studio_line, 28, Color(1, 1, 1, 0.75))
 	if _toast_t < 2.0:
 		_text(root, Vector2(vs.x * 0.5, vs.y * 0.5), _toast, 72, Color(1, 0.6, 0.2, clampf(2.0 - _toast_t, 0.0, 1.0)))
 	if Game.dev:

@@ -1,6 +1,6 @@
 {
  "_doc": "Every Layer generation used by the game (provenance + cost). Images: gpt-image-2.5-flare, quality medium, batch_size 1, priced with estimate_forge_price before running. Workspace 2f56243b-eef9-40c6-a060-8e7c186b0d35, Layer session a51c029f-36c1-4c75-bb35-bc8739852024. PoC 3 audio: Sonilo SFX / Sonilo Music 1.1 (owner permission).",
- "total_cost_creative_units": 39.527,
+ "total_cost_creative_units": 44.236,
  "jobs": [
   {
    "job_id": "bowl_background",
@@ -376,6 +376,45 @@
    "local_source": "assets/source/audio/",
    "runtime": "assets/audio/gameover_sting.ogg",
    "prompt_summary": "sad trombone wah-wah-waaah"
+  },
+  {
+   "job_id": "game_logo",
+   "poc": "3.1",
+   "inference_id": "70f9264e-10cd-4ce0-bbef-7bcbdbe266eb",
+   "output_file_id": "4bd99da5-93da-43fa-9af0-17bca02b823c",
+   "size": "1536x1024",
+   "quality": "high",
+   "cost_creative_units": 2.55,
+   "guidance": [
+    {
+     "file_id": "d810927d-827c-4b27-814c-5f1655928861",
+     "type": "reference_image"
+    }
+   ],
+   "local_source": "assets/source/game_logo_raw.png",
+   "runtime": "assets/processed/ui/game_logo.png",
+   "prompt_summary": "Game title logo 'FLUSH ROYALE' (came out lowercase, kept): glossy gold chunky letters, navy outline, crowned white toilet with a blue splash and a flying rubber duck, magenta background."
+  },
+  {
+   "job_id": "title_key_art",
+   "poc": "3.1",
+   "inference_id": "86709868-5f1f-45c5-b01e-16902eab4564",
+   "output_file_id": "0a86cbf5-a7a3-4590-8c38-cf8be5e46093",
+   "size": "864x1536",
+   "cost_creative_units": 2.159,
+   "guidance": [
+    {
+     "file_id": "0936f2e6-8352-4bd1-97e9-03969fe6d07f",
+     "type": "reference_image"
+    },
+    {
+     "file_id": "d810927d-827c-4b27-814c-5f1655928861",
+     "type": "reference_image"
+    }
+   ],
+   "local_source": "assets/source/title_bg_raw.png",
+   "runtime": "assets/processed/ui/title_bg.jpg",
+   "prompt_summary": "Portrait title key art: royal blue/gold bathroom, crowned toilet with a whirlpool, objects from all locations spiralling, calm top third for the logo."
   }
  ]
 }

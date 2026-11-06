@@ -84,7 +84,12 @@ func rise_rate() -> float:
 	var f: float = cfg.rise_from
 	if obstruction <= f:
 		return 0.0
-	return lerpf(float(cfg.rise_min), float(cfg.rise_max), clampf((obstruction - f) / (1.0 - f), 0.0, 1.0))
+	var x := clampf((obstruction - f) / (1.0 - f), 0.0, 1.0)
+	return lerpf(float(cfg.rise_min), float(cfg.rise_max), pow(x, float(cfg.rise_curve)))
+
+## A sacrificed object (lost down the drain in an emergency flush) takes water with it: the bowl drops noticeably.
+func drain_for_sacrifice(area: float) -> void:
+	volume = maxf(geo.volume_at_level(rest_y + float(fl.floor_below_rest)), volume - minf(area * float(cfg.sacrifice_drain), float(cfg.sacrifice_drain_max)))
 
 ## The royal flush may interrupt an emergency flush.
 func stop_flush() -> void:
@@ -288,6 +293,7 @@ func _update_blockage() -> void:
 		_clogged = true
 	elif _clogged and obstruction < float(dr.clear_below):
 		_clogged = false
+		volume = maxf(rest_volume, volume - float(cfg.clear_drop))   # the plug is gone: the water gulps away at once
 		cleared.emit()
 
 func _update_squeeze(dt: float) -> void:

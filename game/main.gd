@@ -13,6 +13,11 @@ enum State { PLAY, ROYAL, LEVEL_DONE, GAME_OVER, VICTORY, ROYAL_READY }
 const SAVE_PATH := "user://best.json"
 ## Survives reload_current_scene: {level, score} of the run in progress (empty = fresh run from level 1).
 static var carry := {}
+## DEV MODE (tap the title logo 5x): not saved, survives level reloads.
+static var dev := false
+static var god_mode := false
+static var dev_slowmo := false
+static var dev_stats := false
 
 var geo: BowlGeometry
 var bowl: Bowl
@@ -57,6 +62,8 @@ func _ready() -> void:
 		Cfg.set_level(int(carry.get("level", 0)))
 		score = int(carry.get("score", 0))
 	level_start_score = score
+	if dev_slowmo:
+		Engine.time_scale = 0.3
 	geo = Cfg.geo
 	var cam := Camera2D.new()
 	cam.position = Vector2(540, 960)
@@ -90,6 +97,7 @@ func _ready() -> void:
 	add_child(hud)
 	hud.flush_pressed.connect(request_flush)
 	hud.restart_pressed.connect(_on_panel_button)
+	hud.dev_pressed.connect(open_dev_panel)
 	water.squeezed.connect(_on_squeezed)
 	water.cleared.connect(_on_cleared)
 	water.splashed.connect(func(p, power):
@@ -391,6 +399,7 @@ func _flushed(o: FlushObject) -> void:
 		fx.text(at, Loc.t("%s x%d +%d") % [name_s, mult, pts], Color(1, 0.85, 0.3), 46 + o.tier * 5)
 	else:
 		stats.lost[o.tier] = stats.lost.get(o.tier, 0) + 1
+		water.drain_for_sacrifice(o.area)
 		if o.tier >= 3:
 			fx.text(at, Loc.t("LOST: %s") % name_s, Color(1.0, 0.55, 0.45), 40 + o.tier * 4)
 	Sfx.play("drain_gulp", clampf(1.25 - o.tier * 0.06, 0.7, 1.3), -4.0)
@@ -439,7 +448,7 @@ func _physics_process(dt: float) -> void:
 		if _alarm_t <= 0.0:
 			_alarm_t = 0.5
 			Sfx.play("alarm")
-		if over_t >= float(Cfg.c.overflow.grace_time):
+		if over_t >= float(Cfg.c.overflow.grace_time) and not god_mode:
 			end_game()
 	else:
 		over_t = maxf(0.0, over_t - dt * 1.5)
@@ -448,6 +457,8 @@ func _physics_process(dt: float) -> void:
 
 func _level_done() -> void:
 	state = State.LEVEL_DONE if Cfg.level < Cfg.level_count() - 1 else State.VICTORY
+	if state == State.LEVEL_DONE and not dev:     # CONTINUE on the title starts here (dev jumps do not unlock)
+		_save.unlocked = maxi(int(_save.get("unlocked", 0)), Cfg.level + 1)
 	_record_best()
 	hud.show_panel(state)
 	Sfx.stop_danger()
@@ -480,16 +491,47 @@ func retry_level() -> void:
 	carry = {"level": Cfg.level, "score": level_start_score}
 	_reload()
 
+## PLAY AGAIN after the victory: back to the title screen.
 func new_run() -> void:
 	carry = {}
-	_reload()
+	Engine.time_scale = 1.0
+	if reload_enabled:
+		get_tree().change_scene_to_file("res://game/ui/title.tscn")
 
 ## R key: restart the current level.
 func restart() -> void:
 	retry_level()
 
+# ------------------------------------------------------------------ dev mode
+
+func open_dev_panel() -> void:
+	if not dev or get_tree().paused:
+		return
+	var p := DevPanel.new()
+	p.game = self
+	add_child(p)
+
+## Replace the object waiting in the slingshot with tier t.
+func dev_set_held(t: int) -> void:
+	if launcher.held:
+		remove_object(launcher.held)
+		launcher.held = null
+	next_tier = t
+	launcher.state = Launcher.State.WAITING
+	spawn_held()
+
+## Drop the level's last object into the bowl and unlock the royal flush (cascade settle still applies).
+func dev_royal_now() -> void:
+	if state != State.PLAY:
+		return
+	make_object(Cfg.max_tier(), Vector2(540, 700))
+	discovered[Cfg.max_tier()] = true
+	hud.reveal(Cfg.max_tier())
+	_last_merge_t = _sim_t
+	unlock_royal_flush()
+
 func _reload() -> void:
-	Engine.time_scale = 1.0
+	Engine.time_scale = 0.3 if dev_slowmo else 1.0
 	if reload_enabled:
 		get_tree().reload_current_scene()
 

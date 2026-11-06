@@ -12,19 +12,19 @@
     "preview_dot_every": 3
   },
   "tiers": {
-    "_doc": "Size curve shared by every level: tier t covers base_area * ratio^(t-1) px^2 (1.45 => tier 9 ~19x tier 1). resistance[t-1] = seconds at full drain pressure to squeeze a plug of that tier through.",
+    "_doc": "Size curve shared by every level: tier t covers base_area * ratio^(t-1) px^2 (1.45 => tier 9 ~19x tier 1). resistance[t-1] = seconds at full drain pressure to squeeze a plug of that tier through. PoC 3.1: tiers 7-9 survive a single emergency flush (the water still drains past them via leak_past_plug); only repeated flushes sacrifice them.",
     "base_area": 3900,
     "ratio": 1.45,
     "resistance": [
+      0.5,
+      0.5,
       0.6,
-      0.6,
-      0.7,
-      1.2,
-      1.8,
-      2.6,
-      3.4,
-      4.2,
-      5.0
+      0.8,
+      1.0,
+      1.4,
+      3.6,
+      4.6,
+      5.6
     ]
   },
   "merge": {
@@ -71,18 +71,22 @@
     "ripple_stiffness": 70.0,
     "ripple_damping": 3.2,
     "ripple_spread": 0.22,
-    "_pressure_doc": "PoC 3 arcade pressure: the drain's smoothed obstruction (0..1) drives the water. Below rise_from the water recovers toward rest at recover_rate px^2/s; above it the water RISES at rise_min..rise_max px^2/s (linear in obstruction). Displacement of submerged objects still adds on top. Overflow capacity from rest is ~380k px^2.",
+    "_pressure_doc": "Arcade pressure (PoC 3.1, owner: rising slower, partial clogs much slower). obstruction (0..1) above rise_from: water rises at lerp(rise_min, rise_max, x^rise_curve) px^2/s with x = (obstruction-rise_from)/(1-rise_from): partial clog ~3-5 min, severe ~1-1.5 min to overflow (empty bowl, capacity ~350k px^2). Below rise_from the water sinks at recover_rate; when a clog clears, clear_drop px^2 drain at once. Every object LOST to an emergency flush drains area*sacrifice_drain (max sacrifice_drain_max) extra: sacrifices buy time.",
     "rise_from": 0.45,
-    "rise_min": 5500,
-    "rise_max": 15000,
-    "recover_rate": 7000
+    "rise_min": 1200,
+    "rise_max": 7000,
+    "recover_rate": 16000,
+    "rise_curve": 2.0,
+    "clear_drop": 60000,
+    "sacrifice_drain": 4.0,
+    "sacrifice_drain_max": 120000
   },
   "flush": {
-    "duration": 2.2,
+    "duration": 2.6,
     "cooldown": 0.8,
     "inflow_total": 0,
     "inflow_time": 1.8,
-    "outflow_rate": 140000,
+    "outflow_rate": 220000,
     "siphon_tail": 0.9,
     "_vortex_doc": "Side view of a whirlpool around the vertical drain axis: suction pulls DOWN (strongest on the axis), objects are drawn TOWARD the axis, the swirl shows as a sideways slosh + spin. All scaled by 1/(1 + distance_to_drain/falloff).",
     "radial": 2900,
@@ -96,8 +100,8 @@
     "ramp_in": 0.3,
     "ramp_out": 0.7,
     "_doc": "EMERGENCY FLUSH (costs a charge, scores nothing): strong vortex for `duration`, the drain removes outflow_rate*(1-blockage) px^2/s down to floor_below_rest px under the rest level; whatever reaches the outlet is lost. Plugs build squeeze pressure and can be pushed through (sacrificed). Water leaks past a plug: outflow = outflow_rate * (1 - blockage * (1 - leak_past_plug)), so even a plugged flush buys some time.",
-    "floor_below_rest": 150,
-    "leak_past_plug": 0.5
+    "floor_below_rest": 260,
+    "leak_past_plug": 0.85
   },
   "drain": {
     "check_from_y": 1290,

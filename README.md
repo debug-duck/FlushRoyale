@@ -18,11 +18,12 @@ Three ridiculous locations, nine objects each - what the hell comes after a radi
 * **Merge:** two identical objects merge on contact into the next one (small points). Merges in quick succession build a
   **CHAIN** (more points, faster flush meter). **TRIPLE MERGE:** three identical objects at once become TWO of the next one.
 * **Discover:** the strip at the top shows the level's nine objects; unknown ones are silhouettes until you create them.
-* **Rising water:** heavy things sink into the drain. When it clogs, the water RISES (the worse the clog, the faster); a clear
-  drain slowly recovers. Water over the red dashed line for 3 seconds = **FLOODED**.
+* **Rising water:** heavy things sink into the drain. When it clogs, the water RISES - slowly for a partial clog, faster for a
+  bad one; clear the drain and the water gulps away. Water over the red dashed line for 3 seconds = **FLOODED**.
 * **Clear the clog:** merge onto it, knock it loose with a precise throw, or...
-* **EMERGENCY FLUSH (earned):** merges fill the ring around the FLUSH button; a full ring = one charge (up to 3). The whirlpool lowers
-  the water and shakes everything up, but whatever goes down the drain is **LOST** - no points, maybe your laptop.
+* **EMERGENCY FLUSH (earned):** merges fill the ring around the FLUSH button; a full ring = one charge (up to 3). The whirlpool drains
+  a lot of water and shakes everything up, but whatever goes down is **LOST** (no points). Big objects survive one flush - panic
+  flushing again and again will sacrifice them (each sacrifice drains extra water).
 * **ROYAL FLUSH:** create the location's ninth object: the water stops, the cascade finishes, the button turns gold - press it and
   everything goes down at ×3 points. Then the next location.
 
@@ -41,7 +42,8 @@ tools/ci/setup_godot.sh             # pinned Godot 4.4.1 (Linux) -> /opt/godot
 godot --path . --import
 godot --path .                      # mouse works like touch
 ```
-Keys: `F`/`Space` flush · `R` retry level · `F1` collision debug · debug builds: `1`-`9` drop an object at the mouse,
+**DEV MODE:** tap the logo on the title screen 5 times; a DEV button appears in the game (god mode, level jumps, choose/drop
+objects, royal flush now, water controls, stats). Keys: `F`/`Space` flush · `R` retry level · `F1` collision debug · debug builds: `1`-`9` drop an object at the mouse,
 `C` +1 flush charge, `L` next level.
 Android: CI builds a debug APK (artifact `flush-royale-debug-apk`).
 
@@ -53,7 +55,7 @@ exists, otherwise English; on PC it is always English. Details: `CLAUDE.md` §4d
 
 ## Tests
 ```bash
-godot --headless --path . --fixed-fps 60 tests/run_tests.tscn     # ~610 checks
+godot --headless --path . --fixed-fps 60 tests/run_tests.tscn     # ~640 checks
 godot --headless --path . --fixed-fps 60 tests/bot_probe.tscn -- --games=3 --cap=1200 --policy=conservative
 ```
 All tuning lives in `data/config.json`, `data/levels.json`, `data/bowl.json`. Architecture and tuning notes: [`CLAUDE.md`](CLAUDE.md).

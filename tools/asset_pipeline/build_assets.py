@@ -132,7 +132,33 @@ def objects():
             save(img, level, t + 1)
 
 
+def ui():
+    """Game logo (keyed), title key art, and the boot splash: the studio logo centred by its visible content on a portrait
+    1080x1920 canvas (Godot shows it with boot_splash/fullsize=true: scaled to fit, never cut, on any screen)."""
+    d = os.path.join(OUT, "ui")
+    os.makedirs(d, exist_ok=True)
+    logo = os.path.join(SRC, "game_logo_raw.png")
+    if os.path.exists(logo):
+        img = trim(key_magenta(Image.open(logo)), pad=6)
+        img.save(os.path.join(d, "game_logo.png"))
+        print("game_logo", img.size)
+    bg = os.path.join(SRC, "title_bg_raw.png")
+    if os.path.exists(bg):
+        Image.open(bg).convert("RGB").resize((1080, 1920), Image.LANCZOS).save(os.path.join(d, "title_bg.jpg"), quality=88)
+    studio = os.path.join(G.ROOT, "Studio_Logo.png")
+    if os.path.exists(studio):
+        art = Image.open(studio).convert("RGBA")
+        art = art.crop(art.getchannel("A").point(lambda a: 255 if a > 24 else 0).getbbox())
+        w = 860
+        art = art.resize((w, round(art.height * w / art.width)), Image.LANCZOS)
+        canvas = Image.new("RGBA", (1080, 1920), (255, 255, 255, 255))
+        canvas.alpha_composite(art, ((1080 - art.width) // 2, (1920 - art.height) // 2 - 60))
+        canvas.convert("RGB").save(os.path.join(d, "splash_wrong_button.png"))
+        print("splash", art.size, "on 1080x1920")
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     backgrounds()
     objects()
+    ui()

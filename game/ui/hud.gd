@@ -6,6 +6,7 @@ extends CanvasLayer
 
 signal flush_pressed
 signal restart_pressed
+signal dev_pressed
 
 const INK := Color(0.1, 0.1, 0.18)
 const GOLD := Color(1.0, 0.82, 0.3)
@@ -14,6 +15,7 @@ var game: Node
 var root: Control
 var flush_button: Button
 var restart_button: Button
+var dev_button: Button
 var font: Font
 var _panel_t := -1.0
 var _panel_state := 0
@@ -59,6 +61,21 @@ func _ready() -> void:
 	restart_button.add_theme_color_override("font_color", Color.WHITE)
 	restart_button.pressed.connect(func(): restart_pressed.emit())
 	root.add_child(restart_button)
+	dev_button = Button.new()
+	dev_button.text = Title.DEV_LABEL
+	dev_button.focus_mode = Control.FOCUS_NONE
+	dev_button.add_theme_font_size_override("font_size", 34)
+	var dsb := StyleBoxFlat.new()
+	dsb.bg_color = Color(0.9, 0.55, 0.1, 0.9)
+	dsb.set_corner_radius_all(16)
+	dsb.set_border_width_all(4)
+	dsb.border_color = INK
+	for st in ["normal", "hover", "pressed", "focus"]:
+		dev_button.add_theme_stylebox_override(st, dsb)
+	_place(dev_button, Vector2(0, 1), Rect2(160, -120, 130, 70))
+	dev_button.visible = Game.dev
+	dev_button.pressed.connect(func(): dev_pressed.emit())
+	root.add_child(dev_button)
 
 ## Anchor a control to one point of the screen (0..1) with a pixel rect relative to it.
 static func _place(c: Control, anchor: Vector2, r: Rect2) -> void:
@@ -137,6 +154,8 @@ func _draw_hud() -> void:
 	_icon(game.next_tier, box.position + Vector2(95, 118), 112.0, true)
 	_draw_strip(vs)
 	_draw_gauge(vs, water)
+	if Game.dev_stats:
+		_draw_stats(water)
 	# danger: a red glow creeping in from the screen edges as the water climbs (pulses faster while rising)
 	if game.state == Game.State.PLAY:
 		var f: float = water.fill_frac()
@@ -183,6 +202,21 @@ func _draw_hud() -> void:
 				_text(Vector2(cx, y - 220), Loc.t("FLOODED!"), 140, Color(0.6, 0.85, 1.0), true)
 				_text(Vector2(cx, y - 80), Loc.t("SCORE %d") % game.score, 80, Color.WHITE, true)
 				_text(Vector2(cx, y + 10), Loc.t("BEST %d") % game.best, 54, GOLD, true)
+
+## DEV stats overlay (debug text, English only on purpose).
+func _draw_stats(water: Water) -> void:
+	var cap := Cfg.geo.volume_at_level(Cfg.bowl.overflow_y) - water.volume - water.displaced
+	var rise := water.rise_rate()
+	var lines := [
+		"FPS %d   objects %d   state %d" % [Engine.get_frames_per_second(), game.objects.size(), game.state],
+		"obstruction %.2f   blockage %.2f   plug %s" % [water.obstruction, water.blockage, str(water.plug.def.name) if water.plug else "-"],
+		"fill %.0f%%   rise %.0f/s   overflow in %s" % [water.fill_frac() * 100.0, rise, ("%.0f s" % (cap / rise)) if rise > 0.0 else "-"],
+		"charges %d   meter %.2f   chain %d   lost %s" % [game.charges, game.meter, game.chain, str(game.stats.lost)],
+	]
+	for i in lines.size():
+		var p := Vector2(30, 640 + i * 34)
+		root.draw_string_outline(font, p, lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 26, 8, INK)
+		root.draw_string(font, p, lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color(0.7, 1.0, 0.7))
 
 ## One line, shrunk to fit max_w.
 func _text_fit(p: Vector2, s: String, size: int, max_w: float, col: Color, outline := 16) -> void:

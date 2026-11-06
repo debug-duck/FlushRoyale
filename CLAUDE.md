@@ -38,25 +38,34 @@ AIM → THROW → MERGE → GROW → FLUSH → SCORE / CLOG → RECOVER. Comedy 
   then the FLUSH button turns into ROYAL FLUSH.
 * Audio: Sonilo SFX + short Sonilo music stings (owner permission for THIS project; RockRocketLaser's Suno-only rule does not apply).
   No background music.
-Still out of scope: main menu, settings, ads, store, power-ups, narrative (see §9).
+**PoC 3.1** (owner feedback 2026-11-06: "most frustrating game in history" - rage quits at the debt monster):
+* Water rises much SLOWER on a curve (partial clog ~3-5 min, severe ~1-1.5 min to overflow), recovers fast when clear, drops at once
+  when a clog clears; emergency flushes drain much more, also past a plug; every sacrificed object drains extra water;
+  tiers 7-9 survive a single emergency flush (only repeated panic flushes lose them).
+* TITLE SCREEN (main scene `game/ui/title.tscn`): Layer key art + game logo, PLAY / CONTINUE (furthest location reached, saved), best.
+* DEV MODE: tap the title logo 5x (taps < 1.2 s apart; again = off). DEV button in the HUD (bottom left) opens
+  `game/debug/dev_panel.gd` (pauses): god mode, restart / prev / next / jump level, choose next throw, drop any tier, royal flush now,
+  +1 charge, drain / raise / freeze water, clear bowl, slow-mo, stats overlay, collision outlines. Not saved; English only.
+* Boot splash: studio logo centred by its visible content on a 1080x1920 white canvas, `boot_splash/fullsize=true` (fits any screen).
+Still out of scope: settings, ads, store, power-ups, narrative (see §9).
 
 ## 2. Status
 * Engine pinned **Godot 4.4.1-stable** (`tools/ci/godot_version.env`), GDScript, `gl_compatibility`, 1080×1920 `canvas_items` + `expand`
   (a Camera2D centres the design area on any aspect). Physics 60 Hz, gravity 1600, default damping 0.
 * Boot splash = Wrong Button Studio logo (`assets/processed/ui/splash_wrong_button.png`, from the original `Studio_Logo.png` at the root,
   which is excluded from the APK), not the Godot one; guarded by `test_project_and_export`. Package `com.wrongbutton.flushroyale`.
-* `tests/run_tests.tscn`: ~610 checks, all pass (PoC 1-2 criteria, every tier of every level can go down the drain, rising water vs
-  obstruction, natural clear by merging, emergency-flush sacrifice, royal unlock/arm/trigger + overflow immunity, localisation).
+* `tests/run_tests.tscn`: ~640 checks, all pass (PoC 1-2 criteria, every tier of every level can go down the drain, rising water vs
+  obstruction, natural clear by merging, big plugs survive one flush / repeated flushes sacrifice, sacrifice drains water, royal
+  unlock/arm/trigger + overflow immunity, title + dev mode, splash, localisation).
 * Multi-language READY (§4d), English only: no translations yet (owner: they come with PoC 3).
-* Bot probe, PoC 3 numbers (`tests/bot_probe.tscn -- --start=N --policy=P`, 15 min cap, aiming bot that prefers the clog):
+* Bot probe, PoC 3.1 numbers (`tests/bot_probe.tscn -- --start=N --policy=P`, 15 min cap, 2 games each, aiming bot that prefers the clog):
   | style | Dormitory | White House | Royal Palace |
   |---|---|---|---|
-  | aggressive (throw 1.0 s, flush from 85 %) | ROYAL 3-4 min | ROYAL 2.5-5.5 min | ROYAL ~4 min |
-  | conservative (1.6 s, flush from 60 %) | ROYAL ~6 min | ROYAL 5-5.5 min | ROYAL 4.5-11 min |
-  | flusher (flush whenever rising) | ROYAL 7-12 min | stuck at tier 8 (flushes away material) | - |
-  | holdout (flush only when overflowing) | stuck at tier 8 | stuck at tier 6-7 | stuck at tier 7-8 |
-  Water is rising ~60-75 % of the time; overflow targets: partial clog ~40-50 s, severe ~27 s (empty bowl). Nobody floods often:
-  the grace time + a stored charge saves most bots, so humans (slower) will see more floods. Tune with humans.
+  | aggressive (throw 1.0 s, flush from 85 %) | ROYAL 2-3.5 min | ROYAL 2-2.5 min | ROYAL 2-3.5 min |
+  | conservative (1.6 s, flush from 60 %) | ROYAL 4-5.5 min | ROYAL 5-6 min | ROYAL 5.5 min |
+  | holdout (flush only when overflowing) | ROYAL 6 min | ROYAL 4.5-6 min | ROYAL 4.5 min |
+  | flusher (flush at the first rise) | stuck at tier 6 (flushes away its material) | same | same |
+  No flood in 24 runs and no tier 7-9 lost: generous on purpose after the owner's rage-quit feedback. Tune with humans.
 * Android debug APK is built by CI (`android-debug-apk` job). **Not yet played on a physical phone.**
 
 ## 3. Layout
@@ -70,7 +79,9 @@ game/bowl/bowl.gd       collision: thick convex wall pieces, rim slopes, screen 
 game/bowl/water.gd      water volume/level, buoyancy, drag, displacement, vortex, siphon, blockage, plug squeeze, ripples, drawing
 game/objects/flush_object.gd  RigidBody2D tier object: data shapes, sample points, merge pop, squeeze visuals
 game/throw/launcher.gd  slingshot input (touch == mouse), preview, launch, cooldown
-game/fx/fx.gd · game/ui/hud.gd   floating text/pops/droplets · score, next, FLUSH button, water gauge, warnings, game over
+game/fx/fx.gd · game/ui/hud.gd   floating text/pops/droplets · score, next, FLUSH button, water gauge, warnings, game over, DEV button
+game/ui/title.gd        title screen (main scene): key art, bouncing logo, objects spiralling into the toilet, PLAY/CONTINUE, logo 5x = DEV
+game/debug/dev_panel.gd DEV MODE cheat panel (English only)
 data/config.json        EVERY tuning value (throw, tiers size curve, merge/triple, chain, meter, royal, water, flush, drain, overflow, score)
 data/levels.json        `levels` (played): name, tagline, royal_message, background, spawn weights, `params`, 9 tiers (name, density,
                         friction?, bounce?, sprite, shapes?); `bonus_levels` = PoC 2 locations, kept, not played
@@ -95,7 +106,9 @@ tests/                  run_tests (acceptance), drain_probe (per-tier flush trac
   area = `tiers.base_area · tiers.ratio^(t−1)` (same size curve for all levels; shape units do not matter). Cache key "level:tier". A grid of ~40 equal-area sample points per object gives buoyancy (ρ·g·area per submerged point, applied AT the point →
   natural torques), the submerged fraction (drag) and displacement. Mass = density × area / 1000. Geometry is cached per tier.
 * **Water level is gameplay:** surface = `level_for_volume(water_volume + displaced_area)`. Physical surface is capped at the rim (excess spills).
-* **Arcade pressure (PoC 3)** (`water` + `drain` config): `obstruction` = smoothed (`obstruct_tau`) MEAN coverage of the drain lines from
+* **Arcade pressure (PoC 3.1 values)**: rise = lerp(`rise_min` 1200, `rise_max` 7000, x^`rise_curve` 2) px²/s; `recover_rate` 16000;
+  `clear_drop` 60000 px² at once when a clog clears; a LOST object drains area × `sacrifice_drain` (max `sacrifice_drain_max`).
+  (`water` + `drain` config): `obstruction` = smoothed (`obstruct_tau`) MEAN coverage of the drain lines from
   throat−`obstruct_above` into the outlet; a wedged plug adds `plug_seal × clamp(width/(drain_w·plug_full_width))`. Above `rise_from`
   (0.45: one sunk object is only a warning) the water rises at `rise_min…rise_max` px²/s; below it recovers at `recover_rate`.
   Cues: murky drain glow, bubbles, red screen-edge glow from 55 % full, rising arrows on the gauge, rising-water loop + procedural tick
@@ -110,7 +123,7 @@ tests/                  run_tests (acceptance), drain_probe (per-tier flush trac
   that the current holds at the throat: `lodge_zone`, `lodge_max_speed`) fills at `pressure / resistance` per second,
   pressure = 1 … 1 + `max_pressure_bonus` as the water nears the overflow line. Full ⇒ "SQUEEEZE!": the plug ignores the drain layer,
   is squashed horizontally to the drain width and carried out. Gauge decays slowly between flushes. `tiers.resistance` grows steeply
-  (tier 6 = 2.6 s, tier 9 = 5 s) so one emergency flush rarely loses a big object; repeated panic flushes do (bot-tuned).
+  (tiers 1-6 ≤ 1.4 s: one flush clears small plugs; tiers 7-9 3.6-5.6 s: they survive one flush, the water drains past them).
 * **Merging:** `body_entered` from both bodies → `Game.try_merge` flags both and opens a `triple_window` (0.14 s); a third match that
   touches either (or already rests within `triple_pad`) joins → TRIPLE. Then merge at the mass-weighted centre with `momentum_kept`
   of the momentum; results grow from `grow_from` (no overlap explosion); a triple places its two results apart along the group's axis.
@@ -173,6 +186,9 @@ Re-run the bot probe after ANY tuning change. Android: `tools/ci/setup_godot.sh 
   may approve Layer spend itself up to 20 CU per task; estimate first. `build_assets.py` assigns blobs to grid cells by their centre. Model `gpt-image-2.5-flare`, medium, `batch_size` 1, always
   `estimate_forge_price` first with identical arguments (the RockRocketLaser lesson: batch/size are top-level args).
 * Layer is not used for water, particles, VFX or animation frames (procedural in Godot). Audio: Sonilo since PoC 3 (see above).
+* PoC 3.1: game logo (`ui/game_logo.png`, 2.55 CU, high quality for the lettering: it came out lowercase "flush royale", kept) and
+  title key art (`ui/title_bg.jpg`, 2.16 CU). `build_assets.py ui()` also builds the boot splash from `Studio_Logo.png`.
+  Godot gotcha: never `load()` a texture inside `_draw()` - it is freed before rendering (white screen); keep it in a member.
 * Pipeline: `python3 tools/asset_pipeline/build_assets.py` (needs pillow numpy scipy).
 
 ## 7. Conventions
@@ -189,4 +205,4 @@ constants. Keep it small: no premature abstractions, one script per system.
 * Squeeze-through squash is visual (sprite in world x); collision keeps its shape while it ignores the drain walls.
 
 ## 9. Intentionally out of scope
-Main menu, settings, achievements, ads, store, background music, power-ups, narrative, more than 9 tiers, soft bodies, real fluid simulation.
+Settings menu, achievements, ads, store, background music, power-ups, narrative, more than 9 tiers, soft bodies, real fluid simulation.

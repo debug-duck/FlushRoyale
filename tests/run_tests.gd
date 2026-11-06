@@ -30,6 +30,7 @@ func _ready() -> void:
 	await test_rising_water()
 	await test_natural_clear()
 	await test_emergency_flush_sacrifice()
+	await test_title_and_dev_mode()
 	test_localisation()
 	test_project_and_export()
 	Game.carry = {}
@@ -563,7 +564,8 @@ func _game_scripts(dir: String, out: Array) -> void:
 		if f.ends_with(".gd"):
 			out.append(dir.path_join(f))
 	for d in DirAccess.get_directories_at(dir):
-		_game_scripts(dir.path_join(d), out)
+		if d != "debug":            # the DEV panel is English on purpose (as in RockRocketLaser)
+			_game_scripts(dir.path_join(d), out)
 
 func test_localisation() -> void:
 	var f := FileAccess.open("res://data/i18n/en.json", FileAccess.READ)
@@ -633,7 +635,7 @@ func test_rising_water() -> void:
 	ok(partial > 0.0, "obstructed drain: the water rises")
 	var cap := Cfg.geo.volume_at_level(Cfg.bowl.overflow_y) - Cfg.geo.volume_at_level(Cfg.bowl.rest_level_y)
 	print("  partial obstruction %.2f: rise %.0f/s = %.0f s to overflow" % [game.water.obstruction, partial, cap / maxf(partial, 1.0)])
-	ok(cap / partial > 30.0 and cap / partial < 70.0, "partial obstruction overflows in ~40-60 s (%.0f s)" % (cap / partial))
+	ok(cap / partial > 120.0, "a partial clog builds up slowly: > 2 min to overflow (%.0f s)" % (cap / partial))
 	var l0 := game.water.level_y
 	await seconds(3.0)
 	ok(game.water.level_y < l0 - 5.0, "the level climbs while obstructed")
@@ -645,7 +647,7 @@ func test_rising_water() -> void:
 	var severe: float = game.water.rise_rate()
 	print("  severe obstruction %.2f: rise %.0f/s = %.0f s to overflow" % [game.water.obstruction, severe, cap / maxf(severe, 1.0)])
 	ok(severe > partial, "a severe clog rises faster than a partial one")
-	ok(cap / severe > 18.0 and cap / severe < 35.0, "severe obstruction overflows in ~20-30 s (%.0f s)" % (cap / severe))
+	ok(cap / severe > 45.0 and cap / severe < 110.0, "a severe clog overflows in ~1-1.5 min (%.0f s)" % (cap / severe))
 	# clear again: recovery
 	for o in game.objects.duplicate():
 		game.remove_object(o)
@@ -669,28 +671,81 @@ func test_natural_clear() -> void:
 	ok(game.stats.merges >= 1, "the second textbook merges with the plug")
 	ok(game.stats.clears >= 1, "the merge cleared the drain (floating plushie): UNCLOGGED")
 
-## The emergency flush can save the bowl but costs valuable objects.
+## The emergency flush saves the bowl; a big plug survives ONE flush (the water drains past it), repeated flushes sacrifice it,
+## and every sacrifice drains extra water.
 func test_emergency_flush_sacrifice() -> void:
 	await new_game(false, 0, true)
 	game.charges = 3
-	var couch := game.make_object(8, Vector2(540, 1150))     # student debt monster: sinks and plugs the funnel
+	var monster := game.make_object(8, Vector2(540, 1150))   # student debt monster: sinks and plugs the funnel
 	await seconds(4.0)
 	game.water.volume = Cfg.geo.volume_at_level(900.0)
 	await seconds(0.5)
 	var high := game.water.level_y
-	var cid := couch.get_instance_id()
-	var flushes := 0
+	var cid := monster.get_instance_id()
+	ok(game.request_flush(), "emergency flush spends a charge")
+	await seconds(float(Cfg.c.flush.duration) + float(Cfg.c.flush.siphon_tail) + 0.3)
+	ok(is_instance_id_valid(cid), "one flush does not take the debt monster (big objects resist)")
+	ok(game.water.level_y > high + 60.0, "...but the water drained past it (%.0f -> %.0f)" % [high, game.water.level_y])
+	var flushes := 1
 	while flushes < 3 and is_instance_id_valid(cid):
 		while not game.water.can_flush():
 			await step(5)
-		ok(game.request_flush(), "emergency flush %d spends a charge" % (flushes + 1))
+		game.request_flush()
 		flushes += 1
-		await seconds(float(Cfg.c.flush.duration) + float(Cfg.c.flush.siphon_tail) + 0.3)
-	ok(not is_instance_id_valid(cid), "the plugging debt monster was pushed through: sacrificed (%d flushes)" % flushes)
+		await seconds(0.2)
+	await seconds(float(Cfg.c.flush.duration) + float(Cfg.c.flush.siphon_tail) + 0.3)
+	ok(not is_instance_id_valid(cid), "repeated panic flushes sacrifice it (%d flushes)" % flushes)
 	ok(game.stats.lost.get(8, 0) == 1, "it counts as LOST")
 	ok(game.score == 0, "no points for an emergency flush")
-	ok(game.water.level_y > high + 120.0, "clearing the plug lowered the water a lot (%.0f -> %.0f)" % [high, game.water.level_y])
-	ok(game.charges == 3 - flushes, "charges were spent")
+	# a sacrifice takes water with it
+	var v0 := Cfg.geo.volume_at_level(950.0)
+	game.water.volume = v0
+	game.water.drain_for_sacrifice(Cfg.tier_area(6))
+	ok(v0 - game.water.volume > 50000.0, "a sacrificed laptop drains a lot of water (%.0f px^2)" % (v0 - game.water.volume))
+
+# ------------------------------------------------------------------ title screen + dev mode
+
+func test_title_and_dev_mode() -> void:
+	Game.dev = false
+	var title: Title = load("res://game/ui/title.tscn").instantiate()
+	title.change_scenes = false
+	add_child(title)
+	await step(5)
+	ok(title.logo.texture != null, "title shows the game logo")
+	ok(title._bg != null, "title key art loaded")
+	for i in 4:
+		title.tap_logo()
+	ok(not Game.dev, "4 logo taps: no dev mode yet")
+	title.tap_logo()
+	ok(Game.dev, "5 logo taps: DEV MODE on")
+	title.start(2)
+	ok(Game.carry.get("level", -1) == 2, "CONTINUE starts at the saved level")
+	title.start(0)
+	ok(Game.carry.is_empty(), "PLAY starts a fresh run")
+	title.queue_free()
+	await step(2)
+	# dev panel
+	await new_game(true, 0)
+	ok(game.hud.dev_button.visible, "DEV button visible in dev mode")
+	game.open_dev_panel()
+	await get_tree().process_frame
+	ok(get_tree().paused, "dev panel pauses the game")
+	var panel: DevPanel = null
+	for c in game.get_children():
+		if c is DevPanel:
+			panel = c
+	ok(panel != null, "dev panel opened")
+	if panel:
+		panel._set_next(6)
+		ok(game.launcher.held != null and game.launcher.held.tier == 6, "dev: choose the next throw")
+		panel._toggle_god()
+		ok(Game.god_mode, "dev: god mode on")
+		panel._royal_now()
+		ok(not get_tree().paused, "closing the panel unpauses")
+		ok(game.state == Game.State.ROYAL_READY, "dev: royal flush unlocked instantly")
+	get_tree().paused = false
+	Game.god_mode = false
+	Game.dev = false
 
 func test_project_and_export() -> void:
 	ok(ProjectSettings.get_setting("display/window/handheld/orientation") == 1, "portrait orientation")
@@ -701,6 +756,10 @@ func test_project_and_export() -> void:
 	var splash := str(ProjectSettings.get_setting("application/boot_splash/image", ""))
 	ok(splash == "res://assets/processed/ui/splash_wrong_button.png" and ResourceLoader.exists(splash), "boot splash is the studio logo")
 	ok(ProjectSettings.get_setting("application/boot_splash/show_image", true) == true, "boot splash image shown")
+	ok(ProjectSettings.get_setting("application/boot_splash/fullsize", false) == true, "boot splash scales to fit the screen (never cut)")
+	var sp: Texture2D = load(splash)
+	ok(sp and absf(sp.get_width() / float(sp.get_height()) - 1080.0 / 1920.0) < 0.01, "splash canvas is portrait 9:16")
+	ok(str(ProjectSettings.get_setting("application/run/main_scene", "")) == "res://game/ui/title.tscn", "the game starts on the title screen")
 	var cfg := ConfigFile.new()
 	ok(cfg.load("res://export_presets.cfg") == OK, "export_presets.cfg present")
 	if cfg.get_value("preset.0", "platform", "") == "Android":

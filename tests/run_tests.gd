@@ -601,6 +601,10 @@ func test_project_and_export() -> void:
 	ok(ProjectSettings.get_setting("display/window/size/viewport_width") == 1080 and ProjectSettings.get_setting("display/window/size/viewport_height") == 1920, "9:16 design size")
 	ok(ProjectSettings.get_setting("input_devices/pointing/emulate_touch_from_mouse") == true, "mouse emulates touch")
 	ok(Engine.physics_ticks_per_second == 60, "60 Hz physics")
+	# boot splash = Wrong Button Studio logo, never the Godot one
+	var splash := str(ProjectSettings.get_setting("application/boot_splash/image", ""))
+	ok(splash == "res://assets/processed/ui/splash_wrong_button.png" and ResourceLoader.exists(splash), "boot splash is the studio logo")
+	ok(ProjectSettings.get_setting("application/boot_splash/show_image", true) == true, "boot splash image shown")
 	var cfg := ConfigFile.new()
 	ok(cfg.load("res://export_presets.cfg") == OK, "export_presets.cfg present")
 	if cfg.get_value("preset.0", "platform", "") == "Android":

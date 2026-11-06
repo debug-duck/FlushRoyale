@@ -1,4 +1,4 @@
-# 🚽 FLUSH ROYALE — Wrong Button Games gameplay PoC (Godot 4.4)
+# 🚽 FLUSH ROYALE — Wrong Button Studio gameplay PoC (Godot 4.4)
 
 Throw ridiculous bathroom objects into a giant toilet, merge identical ones into bigger ones, and flush them for points
 before the toilet clogs and overflows.

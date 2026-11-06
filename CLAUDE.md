@@ -1,4 +1,4 @@
-# CLAUDE.md — project brain for FLUSH ROYALE (Wrong Button Games, Godot 4 gameplay PoC)
+# CLAUDE.md — project brain for FLUSH ROYALE (Wrong Button Studio, Godot 4 gameplay PoC)
 
 Read this first; update it when an important decision changes.
 
@@ -30,6 +30,8 @@ Still out of scope: main menu, settings, ads, store (see §9).
 ## 2. Status
 * Engine pinned **Godot 4.4.1-stable** (`tools/ci/godot_version.env`), GDScript, `gl_compatibility`, 1080×1920 `canvas_items` + `expand`
   (a Camera2D centres the design area on any aspect). Physics 60 Hz, gravity 1600, default damping 0.
+* Boot splash = Wrong Button Studio logo (`assets/processed/ui/splash_wrong_button.png`, from the original `Studio_Logo.png` at the root,
+  which is excluded from the APK), not the Godot one; guarded by `test_project_and_export`. Package `com.wrongbutton.flushroyale`.
 * `tests/run_tests.tscn`: 568 checks, all pass (PoC 1 acceptance criteria + every tier of every level flushable within 2 flushes,
   size curve, earned charges, triple merge, chain, royal flush → level done / victory / retry, localisation).
 * Multi-language READY (§4d), English only: no translations yet (owner: they come with PoC 3).

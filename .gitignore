@@ -11,3 +11,6 @@ export_credentials.cfg
 __pycache__/
 *.pyc
 tools/dev/out/
+
+# Godot regenerates these per machine; tracking them makes `git pull` fail on fresh imports
+*.uid

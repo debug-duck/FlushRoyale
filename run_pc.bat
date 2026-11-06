@@ -1,5 +1,5 @@
 @echo off
-REM FLUSH ROYALE  -  run the game on PC (mouse = touch). Keys: F/Space flush, R restart, F1 collision debug.
+REM FLUSH ROYALE  -  run the game on PC (mouse = touch). Keys: F/Space flush, R retry level, F1 collision debug.
 REM Uses Godot 4.4.1 (the pinned version). Set GODOT_EXE to use your own copy; otherwise it is
 REM downloaded once into build\godot (git-ignored).
 setlocal EnableExtensions
@@ -8,23 +8,36 @@ cd /d "%~dp0"
 REM ---- first use: this .bat on its own (no project next to it) -> clone the repo into C:\temp\FlushRoyale, run from there ----
 if exist "%~dp0project.godot" goto :have_project
 set "REPO=https://github.com/debug-duck/FlushRoyale.git"
-set "BRANCH=main"
 set "TARGET=C:\temp\FlushRoyale"
 where git >nul 2>&1 || (echo Git is needed: https://git-scm.com/download/win & goto :fail)
 if not exist "%TARGET%\project.godot" (
   echo Cloning Flush Royale into %TARGET% ...
   if not exist "C:\temp" mkdir "C:\temp"
-  git clone -b %BRANCH% %REPO% "%TARGET%" || goto :fail
+  git clone %REPO% "%TARGET%" || goto :fail
 )
 call "%TARGET%\%~nx0" %*
 exit /b %errorlevel%
 :have_project
 
-REM ---- update from GitHub first (fast-forward only; never overwrites local work) ----
-where git >nul 2>&1 && (
-  echo Updating from GitHub ...
-  git pull --ff-only || echo WARNING: could not update ^(local changes, no network, or diverged branch^) - continuing with the current files.
-)
+REM ---- update from GitHub first: follow the repository's DEFAULT branch, fast-forward only (never overwrites local work) ----
+where git >nul 2>&1 || goto :update_done
+echo Updating from GitHub ...
+git fetch origin --prune || goto :update_failed
+git remote set-head origin -a >nul 2>&1
+set "DEF="
+for /f "delims=" %%B in ('git symbolic-ref --short refs/remotes/origin/HEAD 2^>nul') do set "DEF=%%B"
+if not defined DEF goto :update_pull
+set "DEF=%DEF:origin/=%"
+git checkout -q "%DEF%" 2>nul || git checkout -q -b "%DEF%" --track "origin/%DEF%" || goto :update_failed
+:update_pull
+git pull --ff-only || goto :update_failed
+goto :update_done
+:update_failed
+echo.
+echo WARNING: could not update from GitHub ^(local changes, no network, or diverged branch^) - continuing with the current files.
+echo          "git status" in this folder shows what blocks the update.
+echo.
+:update_done
 
 set "GVER=4.4.1-stable"
 set "GDIR=%~dp0build\godot"

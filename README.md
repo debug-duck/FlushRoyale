@@ -24,7 +24,7 @@ Three levels, nine objects each. Make the ninth and the whole bowl goes down in 
 Flush small stuff now for safe points, or keep merging for a much bigger flush and risk the flood?
 
 ## Run it on Windows
-* **`run_pc.bat`**: pulls the latest version from GitHub, downloads Godot 4.4.1 once (into `build\godot`), re-imports the
+* **`run_pc.bat`**: pulls the latest version from GitHub (always the repository's default branch), downloads Godot 4.4.1 once (into `build\godot`), re-imports the
   assets and starts the game.
 * **`build_android.bat`**: pulls, re-imports, builds `build\flush-royale-debug.apk` and installs + launches it on a phone
   connected over USB (`--no-push` = build only). Needs the Android SDK and JDK 17+ (same as RockRocketLaser).

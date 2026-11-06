@@ -95,6 +95,9 @@ func banner(text: String, seconds: float, royal := false, sub := "") -> void:
 	_banner_len = seconds
 	_banner_royal = royal
 
+func banner_busy() -> bool:
+	return _banner_t < _banner_len
+
 func reveal(tier: int) -> void:
 	_reveal[tier] = 0.0
 
@@ -168,8 +171,8 @@ func _draw_hud() -> void:
 			var left: float = float(Cfg.c.overflow.grace_time) - game.over_t
 			var flash := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.02)
 			_text(Vector2(cx, vs.y * 0.37), Loc.t("OVERFLOWING! %.1f") % maxf(left, 0.0), 80, Color(1, 0.3 + 0.4 * flash, 0.2), true)
-	# banner (not over an end panel)
-	if _banner_t < _banner_len and _panel_t < 0.0:
+	# banner (not over an end panel or a presentation card)
+	if banner_busy() and _panel_t < 0.0 and not game.showcase.active():
 		var a := clampf(minf(_banner_t * 4.0, (_banner_len - _banner_t) * 2.0), 0.0, 1.0)
 		var pop := 1.0 + 0.25 * exp(-_banner_t * 6.0)
 		if _banner_royal:

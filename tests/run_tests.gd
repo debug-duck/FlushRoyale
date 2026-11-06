@@ -31,6 +31,7 @@ func _ready() -> void:
 	await test_natural_clear()
 	await test_emergency_flush_sacrifice()
 	await test_title_and_dev_mode()
+	await test_showcase()
 	test_localisation()
 	test_project_and_export()
 	Game.carry = {}
@@ -59,6 +60,7 @@ func new_game(keep_launcher := false, level := 0, real_charges := false) -> Game
 	Game.carry = {"level": level, "score": 0}
 	game = load("res://game/main.tscn").instantiate()
 	game.persist = false
+	game.intros_enabled = false
 	game.reload_enabled = false
 	game.rng.seed = 1234
 	add_child(game)
@@ -746,6 +748,121 @@ func test_title_and_dev_mode() -> void:
 	get_tree().paused = false
 	Game.god_mode = false
 	Game.dev = false
+
+## PoC 4: intro cards (selected objects, once, never during a cascade, tap / timeout), the grand reveal of the last
+## object on every completion, and the reveal card getting flushed with everything else.
+func test_showcase() -> void:
+	for lv in Cfg.levels:
+		var n := 0
+		for i in lv.tiers.size():
+			var t: Dictionary = lv.tiers[i]
+			if t.has("intro"):
+				n += 1
+				ok(i < lv.tiers.size() - 1, "%s: the last object has a grand reveal, not an intro" % lv.id)
+				ok(str(t.intro).length() <= 80, "%s: intro of %s is short (%d chars)" % [lv.id, t.name, str(t.intro).length()])
+		ok(n >= 3 and n <= 6, "%s: only selected objects get an intro (%d)" % [lv.id, n])
+		ok(str(lv.tiers[-1].get("reveal", "")) != "", "%s: the last object has a reveal line" % lv.id)
+	var drain := Vector2(Cfg.geo.cx, Cfg.geo.throat_y)
+	# --- a merge discovers the Unopened Textbook (dorm tier 4): queued, shown only after the cascade
+	await new_game(false, 0)
+	game.intros_enabled = true
+	var sc: Showcase = game.showcase
+	var a := game.make_object(3, Vector2(470, 900))
+	var b := game.make_object(3, Vector2(610, 900))
+	a.linear_velocity = Vector2(300, 0)
+	b.linear_velocity = Vector2(-300, 0)
+	var merged_at := -1.0
+	for i in 60 * 3:
+		await get_tree().physics_frame
+		if game.discovered.has(4):
+			merged_at = game._sim_t
+			break
+	ok(merged_at > 0.0, "two socks make a textbook")
+	ok(not sc.active(), "no card in the middle of the cascade")
+	var shown_at := -1.0
+	for i in 60 * 4:
+		await get_tree().physics_frame
+		if sc.active():
+			shown_at = game._sim_t
+			break
+	ok(sc.mode == Showcase.Mode.INTRO and sc.tier == 4, "the textbook gets its intro card")
+	ok(shown_at - merged_at >= float(Cfg.c.chain.window) - 0.05, "the card waits for the chain window (%.2f s)" % (shown_at - merged_at))
+	ok(get_tree().paused, "the intro pauses the game")
+	var glyphs := sc._parts.filter(func(p): return p.kind == "glyph").size()
+	ok(glyphs == "UNOPENEDTEXTBOOK".length(), "every letter of the name is its own piece (%d)" % glyphs)
+	ok(sc._parts.filter(func(p): return p.kind == "pic" and p.tex != null).size() == 1, "the card reuses the object's artwork")
+	for i in 20:
+		await get_tree().process_frame
+	var tap := InputEventScreenTouch.new()
+	tap.pressed = true
+	tap.position = Vector2(300, 900)
+	Input.parse_input_event(tap)
+	for i in 3:
+		await get_tree().process_frame
+	ok(not get_tree().paused, "a tap dismisses the card and resumes the game")
+	for i in 40:
+		await get_tree().process_frame
+	ok(not sc.active(), "the card has flown away")
+	ok(not game.wants_intro(4), "each intro is shown once")
+	# --- objects without an intro line just get the NEW: text; timeout closes a card by itself
+	ok(not game.wants_intro(5), "the plushie has no intro (selective)")
+	sc.intro(8)
+	var closed := false
+	for i in int((float(Cfg.c.showcase.intro_time) + 1.0) * 60.0):
+		await get_tree().process_frame
+		if not sc.active():
+			closed = true
+			break
+	ok(closed and not get_tree().paused, "an untouched card leaves after ~%.1f s" % float(Cfg.c.showcase.intro_time))
+	# --- spawn tiers are known from the start: the sock is introduced when it first sits in the slingshot
+	game.dev_set_held(3)
+	var sock := false
+	for i in 60 * 3:
+		await get_tree().physics_frame
+		if sc.active():
+			sock = sc.tier == 3
+			break
+	ok(sock, "the Radioactive Sock is introduced in the slingshot")
+	sc.dismiss()
+	for i in 30:
+		await get_tree().process_frame
+	# --- the grand reveal (every completion) and the card that gets flushed
+	for lv in [0, 2]:
+		await new_game(false, lv)
+		sc = game.showcase
+		game.dev_royal_now()
+		for i in 60 * 3:
+			await get_tree().physics_frame
+			if game.royal_armed:
+				break
+		ok(sc.mode == Showcase.Mode.REVEAL and sc.tier == Cfg.max_tier(), "%s: the last object gets its grand reveal" % Cfg.level_id())
+		ok(not get_tree().paused, "the reveal does not pause (the ROYAL FLUSH button must work)")
+		for i in 90:
+			await get_tree().process_frame
+		ok(sc._revealed, "the drumroll ends with the reveal")
+		ok(game.request_flush() and sc.mode == Showcase.Mode.FLUSHING, "%s: ROYAL FLUSH starts flushing the card" % Cfg.level_id())
+		var torn := 0
+		var swallowed := 0
+		var level_while_card := false
+		var gone := false
+		for i in 60 * 14:
+			await get_tree().process_frame
+			if sc.active() and (game.state == Game.State.LEVEL_DONE or game.state == Game.State.VICTORY):
+				level_while_card = true
+			if sc.active():
+				torn = maxi(torn, sc._parts.filter(func(p): return p.detached).size())
+				for p in sc._parts:
+					if p.detached and p.w.k >= 0.99 and sc._piece_xf(p).origin.distance_to(drain) < 4.0:
+						swallowed += 1
+			elif not gone:
+				gone = true
+				ok(game.hud._banner == "ROYAL FLUSH!", "the ROYAL FLUSH banner follows once the card is gone")
+			if game.state == Game.State.LEVEL_DONE or game.state == Game.State.VICTORY:
+				break
+		ok(torn >= 40, "%s: the card breaks into its pieces (%d)" % [Cfg.level_id(), torn])
+		ok(swallowed > 0, "%s: the pieces end up in the drain" % Cfg.level_id())
+		ok(gone and not level_while_card, "%s: the level transition waits for the card" % Cfg.level_id())
+		ok(game.state == Game.State.LEVEL_DONE or game.state == Game.State.VICTORY, "%s: then the level is complete" % Cfg.level_id())
 
 func test_project_and_export() -> void:
 	ok(ProjectSettings.get_setting("display/window/handheld/orientation") == 1, "portrait orientation")

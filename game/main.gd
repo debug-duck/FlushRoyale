@@ -25,6 +25,7 @@ var water: Water
 var launcher: Launcher
 var fx: Fx
 var hud: Hud
+var showcase: Showcase
 var objects_root: Node2D
 var objects: Array[FlushObject] = []
 var state := State.PLAY
@@ -41,6 +42,7 @@ var chain_mult := 1.0
 var discovered := {}                # tier -> true (this level, this run)
 var persist := true                 # tests turn this off (no save file)
 var reload_enabled := true          # tests turn this off (level changes only set `carry`)
+var intros_enabled := true          # PoC 4 intro cards (most tests/bots turn them off: they pause the game)
 var stats := {"merges": 0, "triples": 0, "flushed": {}, "lost": {}, "squeezed": 0, "launches": 0, "flushes": 0, "best_chain": 0, "royal": 0, "reached": {}, "clears": 0}
 var royal_armed := false            # ROYAL_READY: the cascade has settled, the button now fires the royal flush
 var rng := RandomNumberGenerator.new()
@@ -54,6 +56,7 @@ var _pending: Array = []            # [{objs: [a, b(, c)], t: time_left}]
 var _textures := {}
 var _alarm_t := 0.0
 var _save := {}
+var _intro_queue: Array[int] = []   # discovered tiers waiting for their intro card (shown when the cascade is over)
 
 func _ready() -> void:
 	if carry.is_empty():
@@ -92,6 +95,11 @@ func _ready() -> void:
 	fx = Fx.new()
 	fx.z_index = 8
 	add_child(fx)
+	showcase = Showcase.new()
+	showcase.name = "Showcase"
+	showcase.game = self
+	add_child(showcase)
+	showcase.gone.connect(_on_showcase_gone)
 	hud = Hud.new()
 	hud.game = self
 	add_child(hud)
@@ -142,6 +150,8 @@ func spawn_held() -> void:
 	var o := make_object(next_tier, launcher.launch_pos)
 	next_tier = roll_tier()
 	launcher.hold(o)
+	if wants_intro(o.tier):    # spawn tiers are known from the start: introduce them the first time one is in the slingshot
+		_intro_queue.append(o.tier)
 
 func on_launched(_o: FlushObject) -> void:
 	stats.launches += 1
@@ -273,7 +283,9 @@ func _score_merge(tier: int, pos: Vector2, r: float, triple: bool) -> void:
 	if not discovered.has(tier):
 		discovered[tier] = true
 		hud.reveal(tier)
-		if tier < Cfg.max_tier():
+		if tier < Cfg.max_tier() and wants_intro(tier):
+			_intro_queue.append(tier)
+		elif tier < Cfg.max_tier():
 			fx.text(pos + Vector2(0, -r - 140), Loc.t("NEW: %s!") % Loc.t(Cfg.tier(tier).name).to_upper(), Color(1, 0.9, 0.4), 58)
 		_remember_seen(tier)
 	Sfx.play("pop", 1.25 - tier * 0.06)
@@ -356,7 +368,10 @@ func start_royal_flush() -> void:
 				o.merging = false
 	_pending.clear()
 	Engine.time_scale = float(Cfg.c.royal.slowmo)
-	hud.banner(Loc.t("ROYAL FLUSH!"), 3.5, true, Loc.t(Cfg.level_text("royal_message")))
+	if showcase.has_reveal():     # the grand-reveal card gets flushed too (banner once it is gone)
+		showcase.flush_away(Vector2(geo.cx, geo.throat_y), float(Cfg.c.royal.delay))
+	else:
+		hud.banner(Loc.t("ROYAL FLUSH!"), 3.5, true, Loc.t(Cfg.level_text("royal_message")))
 	Sfx.stop_danger()
 	Sfx.play("royal_fanfare")
 
@@ -384,7 +399,7 @@ func _update_royal(dt: float) -> void:
 	if royal_t > float(r.delay) + float(r.timeout):
 		for o in objects.duplicate():
 			_flushed(o)              # stragglers still count
-	if objects.is_empty() and _royal_queue.is_empty():
+	if objects.is_empty() and _royal_queue.is_empty() and not showcase.active():
 		_level_done()
 
 ## An object reached the end of the outlet. Royal flush: scored x multiplier. Emergency flush: LOST (no points).
@@ -434,13 +449,16 @@ func _physics_process(dt: float) -> void:
 		return
 	if state == State.ROYAL_READY:
 		if not royal_armed and _pending.is_empty() and _sim_t - _last_merge_t >= float(Cfg.c.royal.settle):
-			royal_armed = true     # the cascade is over: hand the finale to the player
-			hud.banner(Loc.t("ROYAL FLUSH UNLOCKED!"), 2.5, true, Loc.t("TAP THE BUTTON!"))
+			royal_armed = true     # the cascade is over: the grand reveal, then the finale is the player's
+			_intro_queue.clear()
+			if showcase.active():
+				showcase.dismiss()
+			showcase.reveal(Cfg.max_tier())
 			hud.flash_flush()
-			Sfx.cascade(6)
 		return
 	if state != State.PLAY:
 		return
+	_try_intro()
 	Sfx.set_danger(water.fill_frac(), water.rise_rate() > 0.0)
 	if water.level_y <= water.overflow_y:
 		over_t += dt
@@ -452,6 +470,45 @@ func _physics_process(dt: float) -> void:
 			end_game()
 	else:
 		over_t = maxf(0.0, over_t - dt * 1.5)
+
+# ------------------------------------------------------------------ presentation cards (PoC 4)
+
+## Tiers with an `intro` line get a card on their first discovery ever (saved per level:tier).
+func wants_intro(tier: int) -> bool:
+	return intros_enabled and str(Cfg.tier(tier).get("intro", "")) != "" and not _intros_seen().has(_intro_key(tier)) \
+		and not _intro_queue.has(tier)
+
+## Show the next queued intro, but never inside a cascade: no merge pending, the chain window has passed, the player is
+## not aiming and no flush is running.
+func _try_intro() -> void:
+	if _intro_queue.is_empty() or showcase.active() or get_tree().paused or hud.banner_busy():
+		return
+	if not _pending.is_empty() or _sim_t - _last_merge_t < float(Cfg.c.chain.window):
+		return
+	if launcher.state == Launcher.State.AIMING or water.flushing():
+		return
+	var t: int = _intro_queue.pop_front()
+	var seen := _intros_seen()
+	seen.append(_intro_key(t))
+	_save.intros = seen
+	_write_save()
+	showcase.intro(t)
+
+func _intro_key(tier: int) -> String:
+	return "%s:%d" % [Cfg.level_id(), tier]
+
+func _intros_seen() -> Array:
+	var a = _save.get("intros", [])
+	return a if a is Array else []
+
+## DEV: show every intro again.
+func dev_reset_intros() -> void:
+	_save.intros = []
+	_write_save()
+
+func _on_showcase_gone() -> void:
+	if state == State.ROYAL:
+		hud.banner(Loc.t("ROYAL FLUSH!"), 3.0, true, Loc.t(Cfg.level_text("royal_message")))
 
 # ------------------------------------------------------------------ level flow
 

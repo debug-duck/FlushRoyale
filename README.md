@@ -27,6 +27,9 @@ Three ridiculous locations, nine objects each - what the hell comes after a radi
 * **ROYAL FLUSH:** create the location's ninth object: the water stops, the cascade finishes, the button turns gold - press it and
   everything goes down at ×3 points. Then the next location.
 
+* **Discoveries:** some objects are too ridiculous to go unannounced - the first time you find one, it gets its own little card
+  (tap to skip). And every location's last object gets a grand reveal... which does not survive the ROYAL FLUSH either.
+
 Keep merging, try the trick shot, or sacrifice your precious objects to survive?
 
 ## Run it on Windows
@@ -43,7 +46,7 @@ godot --path . --import
 godot --path .                      # mouse works like touch
 ```
 **DEV MODE:** tap the logo on the title screen 5 times; a DEV button appears in the game (god mode, level jumps, choose/drop
-objects, royal flush now, water controls, stats). Keys: `F`/`Space` flush · `R` retry level · `F1` collision debug · debug builds: `1`-`9` drop an object at the mouse,
+objects, royal flush now, water controls, stats, show / replay the intro cards). Keys: `F`/`Space` flush · `R` retry level · `F1` collision debug · debug builds: `1`-`9` drop an object at the mouse,
 `C` +1 flush charge, `L` next level.
 Android: CI builds a debug APK (artifact `flush-royale-debug-apk`).
 
@@ -55,7 +58,7 @@ exists, otherwise English; on PC it is always English. Details: `CLAUDE.md` §4d
 
 ## Tests
 ```bash
-godot --headless --path . --fixed-fps 60 tests/run_tests.tscn     # ~640 checks
+godot --headless --path . --fixed-fps 60 tests/run_tests.tscn     # ~700 checks
 godot --headless --path . --fixed-fps 60 tests/bot_probe.tscn -- --games=3 --cap=1200 --policy=conservative
 ```
 All tuning lives in `data/config.json`, `data/levels.json`, `data/bowl.json`. Architecture and tuning notes: [`CLAUDE.md`](CLAUDE.md).

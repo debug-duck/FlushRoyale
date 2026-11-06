@@ -49,6 +49,16 @@
     "start_charges": 1,
     "max_charges": 3
   },
+  "showcase": {
+    "_doc": "PoC 4 presentation cards (game/ui/showcase.gd). INTRO: a tier with an `intro` line in levels.json, first discovery ever (saved): queued until the cascade is over (no pending merge, `chain.window` s since the last merge, not aiming, not flushing), pauses the game for `intro_time` real s (tap = dismiss). REVEAL: the level's last tier, every completion, when the royal flush arms: `drumroll` s silhouette, then the object; stays until ROYAL FLUSH. Then it shakes for royal.delay, breaks into pieces (`break_stagger` s apart) that spiral into the drain in `suck_time` s.",
+    "intro_time": 2.8,
+    "drumroll": 1.0,
+    "break_stagger": 0.035,
+    "suck_time": [1.1, 1.7],
+    "turns": [0.8, 1.6],
+    "card_center": [540, 830],
+    "card_size": [820, 900]
+  },
   "royal": {
     "_doc": "ROYAL FLUSH: creating the last tier of a level. Slow-mo for `delay` s, then a long vortex while every object is released into the drain one by one (`stagger` s, nearest first) and scored x multiplier. `timeout` s later stragglers are scored and removed and the level is complete.",
     "delay": 1.4,

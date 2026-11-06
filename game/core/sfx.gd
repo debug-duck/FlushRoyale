@@ -30,6 +30,13 @@ func _ready() -> void:
 	streams.alarm = _make(0.25, func(t, u): return (1.0 if sin(TAU * 880.0 * t) > 0.0 else -1.0) * 0.18 * (1.0 if u < 0.8 else 0.0))
 	streams.gameover = _make(1.2, func(t, u): return sin(TAU * (300.0 - 220.0 * u) * t) * (1.0 - u) * 0.5)
 	streams.tick = _make(0.07, func(t, u): return sin(TAU * 1250.0 * t) * pow(1.0 - u, 2.0) * 0.35)
+	# PoC 4 presentation cards (closed-form phases so the glides stay clean)
+	streams.boing = _make(0.5, func(t, u): return sin(TAU * (170.0 * t + 640.0 * t * t / 1.0) + 2.5 * sin(TAU * 11.0 * t)) * pow(1.0 - u, 1.4) * 0.5 \
+		+ (sin(TAU * 1318.0 * t) + 0.5 * sin(TAU * 1976.0 * t)) * exp(-maxf(t - 0.18, 0.0) * 9.0) * (0.22 if t > 0.18 else 0.0))
+	streams.drumroll = _make(1.05, func(t, u): return (_noise() * pow(0.5 + 0.5 * sin(TAU * 31.0 * t), 2.0) * 0.5 + sin(TAU * 72.0 * t) * 0.12) * (0.2 + 0.8 * u))
+	streams.rattle = _make(1.4, func(t, u): return (_noise() * (1.0 if sin(TAU * 17.0 * t) > 0.0 else 0.25) * 0.3 + sin(TAU * (120.0 * t) + 4.0 * sin(TAU * 9.0 * t)) * 0.12) * (0.3 + 0.7 * u))
+	streams.slide_down = _make(1.3, func(t, u): return sin(TAU * (1500.0 * (1.0 - exp(-1.8 * t)) / 1.8 + 110.0 * t)) * pow(sin(PI * u), 0.5) * 0.32)
+	streams.whoosh = _make(0.3, func(t, u): return _noise() * sin(PI * u) * 0.3)
 	for f in DirAccess.get_files_at("res://assets/audio/"):
 		var n := f.trim_suffix(".import")
 		if n.ends_with(".ogg") and not streams.has(n.get_basename()):

@@ -4,7 +4,7 @@
     python3 tools/i18n/extract_strings.py [--list]
 
 Sources (exact, no guessing):
-* data/levels.json (played levels): every level `name`, `tagline`, `royal_message` and every tier `name`;
+* data/levels.json (played levels): every level `name`, `tagline`, `royal_message` and every tier `name`, `intro`, `reveal` (PoC 4 cards);
 * game/**/*.gd: every string literal passed straight to Loc.t("...").
 Rule for code: show text only through Loc.t("..."), translate a FORMAT and fill it afterwards (Loc.t("CHAIN x%d") % n),
 never glue translated pieces together.
@@ -33,6 +33,9 @@ def collect():
                 found.add(lv[k])
         for t in lv["tiers"]:
             found.add(t["name"])
+            for k in ("intro", "reveal"):
+                if t.get(k):
+                    found.add(t[k])
     for p in sorted((ROOT / "game").rglob("*.gd")):
         for m in LOC_CALL.finditer(p.read_text(encoding="utf-8")):
             found.add(m.group(1).replace("\\n", "\n").replace('\\"', '"'))

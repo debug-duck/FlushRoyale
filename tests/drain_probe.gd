@@ -26,6 +26,7 @@ func run(t: int) -> void:
 	Game.carry = {"level": level, "score": 0}
 	game = load("res://game/main.tscn").instantiate()
 	game.persist = false
+	game.intros_enabled = false
 	game.reload_enabled = false
 	game.charges = 99
 	add_child(game)

@@ -37,6 +37,7 @@ func _ready() -> void:
 		[["", "DRAIN WATER", Color("2c9ac0"), _drain], ["", "RAISE WATER", Color("c0392b"), _raise]],
 		[["freeze", "", Color("2c7ac0"), _toggle_freeze], ["", "CLEAR BOWL", Color("c0392b"), _clear_bowl]],
 		[["slow", "", Color("2c7ac0"), _toggle_slow], ["stats", "", Color("2c7ac0"), _toggle_stats]],
+		[["", "SHOW AN INTRO CARD", Color("8a4fc0"), _show_intro], ["", "REPLAY ALL INTROS", Color("8a4fc0"), _replay_intros]],
 		[["coll", "", Color("555a70"), _toggle_collision], ["", "CLOSE", Color("555060"), close]],
 	]
 	for row in rows:
@@ -158,6 +159,23 @@ func _set_next(t: int) -> void:
 
 func _drop(t: int) -> void:
 	game.make_object(t, Vector2(randf_range(380, 700), 650))
+
+## Cycle through this level's intro cards (and the grand reveal card text of the last tier is seen via ROYAL FLUSH NOW).
+static var _intro_i := -1
+func _show_intro() -> void:
+	var tiers: Array[int] = []
+	for t in range(1, Cfg.max_tier()):
+		if str(Cfg.tier(t).get("intro", "")) != "":
+			tiers.append(t)
+	if tiers.is_empty():
+		return
+	_intro_i = (_intro_i + 1) % tiers.size()
+	close()
+	game.showcase.intro(tiers[_intro_i])
+
+func _replay_intros() -> void:
+	game.dev_reset_intros()
+	close()
 
 func _royal_now() -> void:
 	close()

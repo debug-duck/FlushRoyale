@@ -28,6 +28,7 @@
     },
     {
      "name": "Radioactive Sock",
+     "intro": "Last washed during the Cold War. Now it washes itself.",
      "density": 0.28,
      "color": "9be33c",
      "sprite": "levels/dorm/tier_3.png",
@@ -35,6 +36,7 @@
     },
     {
      "name": "Unopened Textbook",
+     "intro": "Cost: $340. Pages read: the price tag.",
      "density": 1.9,
      "color": "2f5fb8",
      "sprite": "levels/dorm/tier_4.png",
@@ -50,6 +52,7 @@
     },
     {
      "name": "Laptop with 73 Tabs",
+     "intro": "One of them is playing music. Nobody knows which.",
      "density": 1.15,
      "color": "9aa3ad",
      "sprite": "levels/dorm/tier_6.png"
@@ -64,12 +67,14 @@
     },
     {
      "name": "Student Debt Monster",
+     "intro": "It follows you everywhere. Even into the toilet.",
      "density": 1.25,
      "color": "e8e4d0",
      "sprite": "levels/dorm/tier_8.png"
     },
     {
      "name": "Entire University",
+     "reveal": "Congratulations! Your degree is officially down the toilet.",
      "density": 1.5,
      "color": "b84a3a",
      "sprite": "levels/dorm/tier_9.png"
@@ -105,6 +110,7 @@
     },
     {
      "name": "Classified Documents",
+     "intro": "Top secret. Previously stored next to a toilet. Now stored in one.",
      "density": 0.7,
      "color": "e8c98a",
      "sprite": "levels/whitehouse/tier_3.png"
@@ -123,6 +129,7 @@
     },
     {
      "name": "Nuclear Football",
+     "intro": "Not a football. Please stop trying to throw it. Oh. Too late.",
      "density": 2.8,
      "color": "2b2b30",
      "sprite": "levels/whitehouse/tier_6.png",
@@ -131,6 +138,7 @@
     },
     {
      "name": "Bald Eagle",
+     "intro": "Symbol of freedom. Currently not free to leave.",
      "density": 0.6,
      "color": "8a5a36",
      "sprite": "levels/whitehouse/tier_7.png",
@@ -138,12 +146,14 @@
     },
     {
      "name": "Statue of Liberty",
+     "intro": "Give me your tired, your poor, your clogged pipes.",
      "density": 1.7,
      "color": "6fc7a8",
      "sprite": "levels/whitehouse/tier_8.png"
     },
     {
      "name": "The White House",
+     "reveal": "Finally, a government program that actually goes down the drain.",
      "density": 1.2,
      "color": "f2f2f2",
      "sprite": "levels/whitehouse/tier_9.png"
@@ -182,6 +192,7 @@
     },
     {
      "name": "Royal Frog",
+     "intro": "Kissed 400 times. Still a frog. Now suing.",
      "density": 0.55,
      "color": "5cc04a",
      "sprite": "levels/royal/tier_4.png",
@@ -190,12 +201,14 @@
     },
     {
      "name": "Palace Guard",
+     "intro": "Trained to never move. Not even while being flushed.",
      "density": 1.1,
      "color": "d8262c",
      "sprite": "levels/royal/tier_5.png"
     },
     {
      "name": "Golden Throne",
+     "intro": "The original royal toilet. It wants its job back.",
      "density": 2.6,
      "color": "f2b632",
      "sprite": "levels/royal/tier_6.png",
@@ -210,12 +223,14 @@
     },
     {
      "name": "Royal Castle",
+     "intro": "Comes with a moat. You're welcome for the extra water.",
      "density": 1.6,
      "color": "e8d8b0",
      "sprite": "levels/royal/tier_8.png"
     },
     {
      "name": "The King",
+     "reveal": "His Majesty requests a different throne.",
      "density": 0.95,
      "color": "d8262c",
      "sprite": "levels/royal/tier_9.png"

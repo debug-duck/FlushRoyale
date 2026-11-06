@@ -47,16 +47,27 @@ AIM → THROW → MERGE → GROW → FLUSH → SCORE / CLOG → RECOVER. Comedy 
   `game/debug/dev_panel.gd` (pauses): god mode, restart / prev / next / jump level, choose next throw, drop any tier, royal flush now,
   +1 charge, drain / raise / freeze water, clear bowl, slow-mo, stats overlay, collision outlines. Not saved; English only.
 * Boot splash: studio logo centred by its visible content on a 1080x1920 white canvas, `boot_splash/fullsize=true` (fits any screen).
-Still out of scope: settings, ads, store, power-ups, narrative (see §9).
+**PoC 4 "A Little Story Before the Flush"** (owner brief, 2026-11-06; presentation only, gameplay untouched):
+* **Intro cards** for SELECTED objects only (4 per location: `intro` line on the tier in `data/levels.json`): first discovery EVER
+  (saved `intros` in `user://best.json`; spawn tiers = the first time one sits in the slingshot). Queued, shown only when the cascade is
+  over; enlarged artwork + name + one witty line, elastic entrance, letters bounce in, procedural boing/chime; pauses the game, ~2.8 s
+  or tap to dismiss (flies into its strip slot).
+* **Grand reveal** of the last object on EVERY completion (`reveal` line on tier 9): when the royal flush arms (cascade finished)
+  → drumroll over a silhouette → object, name, line; stays until ROYAL FLUSH.
+* **The card gets flushed too:** on ROYAL FLUSH it shakes/tilts/shrinks during the slow-mo, then tears into its pieces (panel chunks
+  with their bit of frame, ribbon, picture, every letter, every word, stars) that spiral into the drain; then the ROYAL FLUSH banner,
+  and the level transition waits for it. No Layer spend (reuses the object art), all tweens/procedural.
+Still out of scope: settings, ads, store, power-ups, dialogue system / cutscenes (see §9).
 
 ## 2. Status
 * Engine pinned **Godot 4.4.1-stable** (`tools/ci/godot_version.env`), GDScript, `gl_compatibility`, 1080×1920 `canvas_items` + `expand`
   (a Camera2D centres the design area on any aspect). Physics 60 Hz, gravity 1600, default damping 0.
 * Boot splash = Wrong Button Studio logo (`assets/processed/ui/splash_wrong_button.png`, from the original `Studio_Logo.png` at the root,
   which is excluded from the APK), not the Godot one; guarded by `test_project_and_export`. Package `com.wrongbutton.flushroyale`.
-* `tests/run_tests.tscn`: ~640 checks, all pass (PoC 1-2 criteria, every tier of every level can go down the drain, rising water vs
+* `tests/run_tests.tscn`: ~700 checks, all pass (PoC 1-2 criteria, every tier of every level can go down the drain, rising water vs
   obstruction, natural clear by merging, big plugs survive one flush / repeated flushes sacrifice, sacrifice drains water, royal
-  unlock/arm/trigger + overflow immunity, title + dev mode, splash, localisation).
+  unlock/arm/trigger + overflow immunity, title + dev mode, splash, localisation, PoC 4 cards: once, after the cascade, tap/timeout,
+  reveal on completion, card torn into the drain before the level transition).
 * Multi-language READY (§4d), English only: no translations yet (owner: they come with PoC 3).
 * Bot probe, PoC 3.1 numbers (`tests/bot_probe.tscn -- --start=N --policy=P`, 15 min cap, 2 games each, aiming bot that prefers the clog):
   | style | Dormitory | White House | Royal Palace |
@@ -81,6 +92,7 @@ game/objects/flush_object.gd  RigidBody2D tier object: data shapes, sample point
 game/throw/launcher.gd  slingshot input (touch == mouse), preview, launch, cooldown
 game/fx/fx.gd · game/ui/hud.gd   floating text/pops/droplets · score, next, FLUSH button, water gauge, warnings, game over, DEV button
 game/ui/title.gd        title screen (main scene): key art, bouncing logo, objects spiralling into the toilet, PLAY/CONTINUE, logo 5x = DEV
+game/ui/showcase.gd     PoC 4 presentation card (intro / grand reveal / flushed into the drain), world space, real time
 game/debug/dev_panel.gd DEV MODE cheat panel (English only)
 data/config.json        EVERY tuning value (throw, tiers size curve, merge/triple, chain, meter, royal, water, flush, drain, overflow, score)
 data/levels.json        `levels` (played): name, tagline, royal_message, background, spawn weights, `params`, 9 tiers (name, density,
@@ -130,8 +142,18 @@ tests/                  run_tests (acceptance), drain_probe (per-tier flush trac
   Max tier never merges. Creating the max tier calls `start_royal_flush()`.
 * **Earned flush / chain:** `Game.add_meter` (per_merge + tier_bonus·(t−2)) × chain_mult (+ triple_bonus); chain uses SIMULATION time.
 * **Royal flush unlock:** creating the max tier → `State.ROYAL_READY` (water `frozen`, overflow ignored, launcher off; merges still
-  run). When no merge happened for `royal.settle` s, `royal_armed` → banner + the FLUSH button becomes ROYAL FLUSH; pressing it calls
-  `start_royal_flush()`.
+  run). When no merge happened for `royal.settle` s, `royal_armed` → the grand-reveal card (`Showcase.reveal`) + the FLUSH button
+  becomes ROYAL FLUSH; pressing it calls `start_royal_flush()`, which hands the card to `Showcase.flush_away()` (the ROYAL FLUSH banner
+  follows on its `gone` signal; `_level_done` waits until the card is swallowed).
+* **Presentation cards (PoC 4)** (`game/ui/showcase.gd`, config `showcase`): ONE node in WORLD space (z 30: above the bowl, below the
+  HUD) so it can fly into the real drain. The card is built from pieces (4×5 panel chunks whose StyleBoxFlat carries only its share of
+  border + rounded corner, so it looks whole until it tears; ribbon; picture; one piece per letter / word; stars). Attached pieces
+  use the tweened card transform; a torn piece runs an accelerating spiral around the drain (radius·(1−k²), angle += turns·TAU·k²,
+  flattened like the vortex). Everything on REAL time (`dt / time_scale`, tweens `set_ignore_time_scale`), PROCESS_MODE_ALWAYS.
+  Intros pause the SceneTree (the HUD redraws once without its banner); the reveal does not (the HUD button must work).
+  `Game._try_intro` = queue + rules (no pending merge, `chain.window` since the last merge, not aiming, no flush, no HUD banner).
+  Tests and bots set `game.intros_enabled = false` (the pause would stall them); `test_showcase` turns it on.
+  Visual QA: `tools/dev/shots_cards.tscn`. DEV panel: SHOW AN INTRO CARD (cycles), REPLAY ALL INTROS.
 * **Royal flush:** `Game.State.ROYAL`: launcher off, `Engine.time_scale = royal.slowmo` for `royal.delay` real seconds, then
   `water.start_flush(royal.duration)` and objects nearest the drain first get `start_passing(true)` (ignore objects + drain layer) every
   `royal.stagger` s; stragglers after `royal.timeout` are scored anyway. Overflow cannot end the game during it.
@@ -152,7 +174,7 @@ tests/                  run_tests (acceptance), drain_probe (per-tier flush trac
 * **Rules for new text:** show player text ONLY through `Loc.t("...")` with a string literal; translate a FORMAT and fill it afterwards
   (`Loc.t("CHAIN x%d") % n`, `Loc.t("NEW: %s!") % Loc.t(name).to_upper()`); never glue translated pieces together. Level and object
   names live in `data/levels.json` and are shown via `Loc.t(name)`. After adding text run `python3 tools/i18n/extract_strings.py`
-  and commit `data/i18n/en.json` (60 strings now). `test_localisation` fails on a missing key or on a raw literal at a display call
+  and commit `data/i18n/en.json` (88 strings now; the extractor also takes tier `intro`/`reveal`). `test_localisation` fails on a missing key or on a raw literal at a display call
   (`_text(`, `fx.text(`, `banner(`, `.text = `).
 * **New language:** copy `en.json` to `<code>.json` (pl, de, ...) and translate the values; keep `%d %s %.1f` (same count and order).
   The extractor reports untranslated keys and placeholder mismatches (`--list`). No translations ship yet (owner: PoC 3).
@@ -166,6 +188,7 @@ godot --headless --path . --fixed-fps 60 tests/run_tests.tscn                   
 godot --headless --path . --fixed-fps 60 tests/drain_probe.tscn -- --level=1 --tiers=1,4,9 [--x=580]   # flush trace per tier
 godot --headless --path . --fixed-fps 60 tests/bot_probe.tscn -- --games=2 --cap=900 --start=0 --policy=conservative|aggressive|flusher|holdout
 xvfb-run -a -s "-screen 0 1280x1024x24" godot --path . --rendering-driver opengl3 --resolution 540x960 tools/dev/shots.tscn   # screenshots -> tools/dev/out
+                                                 # (also shots_ui.tscn, shots_cards.tscn = PoC 4 cards)
 godot --path .                                   # play (mouse = touch). Keys: F/Space flush, R retry level, F1 collision debug;
                                                  # debug builds: 1-9 drop tier at mouse, C +1 flush charge, L next level
 ```
@@ -205,4 +228,5 @@ constants. Keep it small: no premature abstractions, one script per system.
 * Squeeze-through squash is visual (sprite in world x); collision keeps its shape while it ignores the drain walls.
 
 ## 9. Intentionally out of scope
-Settings menu, achievements, ads, store, background music, power-ups, narrative, more than 9 tiers, soft bodies, real fluid simulation.
+Settings menu, achievements, ads, store, background music, power-ups, dialogue system / cutscenes / story framework (PoC 4 cards
+are the whole "story"), more than 9 tiers, soft bodies, real fluid simulation.

@@ -20,6 +20,7 @@ func _new_game(level: int) -> void:
 	Game.carry = {"level": level, "score": 0}
 	game = load("res://game/main.tscn").instantiate()
 	game.persist = false
+	game.intros_enabled = false
 	game.rng.seed = 7
 	add_child(game)
 	await get_tree().physics_frame

@@ -41,6 +41,7 @@ func _new(level: int, score: int, seed_i: int) -> void:
 	Game.carry = {"level": level, "score": score}
 	game = load("res://game/main.tscn").instantiate()
 	game.persist = false
+	game.intros_enabled = false
 	game.reload_enabled = false
 	game.rng.seed = seed_i * 101 + level
 	add_child(game)

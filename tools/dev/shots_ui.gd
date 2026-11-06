@@ -19,6 +19,7 @@ func _ready() -> void:
 	Game.carry = {"level": 1, "score": 0}
 	var game: Game = load("res://game/main.tscn").instantiate()
 	game.persist = false
+	game.intros_enabled = false
 	game.reload_enabled = false
 	add_child(game)
 	for i in 60:

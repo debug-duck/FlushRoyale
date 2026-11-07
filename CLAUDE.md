@@ -238,7 +238,7 @@ tests/                  run_tests (acceptance), drain_probe (per-tier flush trac
   and commit `data/i18n/en.json` (90 strings now; the extractor also takes tier `intro`/`reveal`). `test_localisation` fails on a missing key or on a raw literal at a display call
   (`_text(`, `fx.text(`, `banner(`, `.text = `).
 * **New language:** copy `en.json` to `<code>.json` (pl, de, ...) and translate the values; keep `%d %s %.1f` (same count and order).
-  The extractor reports untranslated keys and placeholder mismatches (`--list`). No translations ship yet (owner: PoC 3).
+  The extractor reports untranslated keys and placeholder mismatches (`--list`). Shipping: en, pl, de, es (2026-11-07).
 * Font: Godot's built-in fallback font (Latin incl. accents, Cyrillic, Greek). CJK/Arabic would need a bundled font.
 
 ## 5. Build / test / run
